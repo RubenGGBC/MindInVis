@@ -1,10 +1,10 @@
 import React from 'react'
-  import ReactDOM from 'react-dom/client'
-  import App from './App.jsx'
-  import './styles/App.css'
+import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './styles/global.css'
 
-  ReactDOM.createRoot(document.getElementById('root')).render( // es la manera de inicializar la app
-    <React.StrictMode>
-      <App />
-    </React.StrictMode>,
-  )
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
+)

@@ -1,40 +1,32 @@
-import React from 'react'
- 
-//lo que se mostrara una vez se haya iniciado la aplicacion 
-  function App() {
-    return (
-      <div className="app">
-        <header className="header">
-          <h1>MindInVis</h1>
-          <p>Mind Mapping con IA</p>
-        </header>
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Home from './pages/Home';
+import Editor from './pages/Editor';
+import { AuthContainer } from './components/auth';
+import './App.css';
 
-        <div className="main-container">
-          <aside className="sidebar">
-            <header className="headersidebar">
-                <h2>Menú de Navegación</h2>
-            </header>
-            <ul>
-                <li>
-                <button>
-                    Menu principal
-                </button>
-                </li>
-                <li>
-                <button>
-                    Configuracion
-                </button>
-                </li>
-            </ul>
-          </aside>
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [userName, setUserName] = useState('');
 
-          <main className="canvas-container">
-            <div className="mindmap-canvas">
-              <p>Aquí irá el mind map</p>
-            </div>
-          </main>
-        </div>
-      </div>
-    )
+  const handleLogin = (name) => {
+    setUserName(name);
+    setIsAuthenticated(true);
+  };
+
+  if (!isAuthenticated) {
+    return <AuthContainer onLogin={handleLogin} />;
   }
-export default App
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home userName={userName} />} />
+        <Route path="/editor" element={<Editor />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

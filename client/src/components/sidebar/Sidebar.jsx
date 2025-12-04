@@ -1,0 +1,70 @@
+import { Home, Star, Settings, Brain, TrendingUp, Sparkles } from 'lucide-react';
+import './Sidebar.css';
+
+const Sidebar = () => {
+  const stats = [
+    { label: 'Mapas creados', value: '24', color: 'cyan' },
+    { label: 'Con IA', value: '18', color: 'purple' },
+  ];
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-header">
+        <div className="logo-compact">
+          <div className="logo-symbol">
+            <Brain size={24} strokeWidth={2.5} />
+          </div>
+        </div>
+        <h2 className="sidebar-title">MindInVis</h2>
+      </div>
+
+      <nav className="sidebar-nav">
+        <div className="nav-section">
+          <button className="nav-item active">
+            <div className="nav-icon">
+              <Home size={20} />
+            </div>
+            <span className="nav-label">Inicio</span>
+          </button>
+          <button className="nav-item">
+            <div className="nav-icon">
+              <Star size={20} />
+            </div>
+            <span className="nav-label">Favoritos</span>
+          </button>
+          <button className="nav-item">
+            <div className="nav-icon">
+              <Settings size={20} />
+            </div>
+            <span className="nav-label">Ajustes</span>
+          </button>
+        </div>
+      </nav>
+
+      <div className="sidebar-stats">
+        <div className="stats-header">
+          <TrendingUp size={16} />
+          <span>Tu actividad</span>
+        </div>
+        {stats.map((stat, index) => (
+          <div key={index} className={`stat-item ${stat.color}`}>
+            <span className="stat-label">{stat.label}</span>
+            <span className="stat-value">{stat.value}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="sidebar-footer">
+        <button className="upgrade-btn">
+          <Sparkles size={18} />
+          <div className="upgrade-text">
+            <span className="upgrade-title">Upgrade Pro</span>
+            <span className="upgrade-subtitle">Desbloquea todo</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+export default Sidebar;
