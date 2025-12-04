@@ -1,0 +1,4 @@
+
+mongoose.connect('URL_DE_LA_CONEXION', {
+	useNewUrlParser: true
+});
