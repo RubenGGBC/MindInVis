@@ -8,7 +8,7 @@ import Toolbar from '../components/editor/Toolbar';
 import MindMapNode from '../models/MindMapNode';
 import IAService from '../services/IAServices';
 import { editorReducer, getInitialState, actionCreators } from '../reducers/editorReducer';
-import { findNodeById } from '../utils/nodeUtils';
+import { findNodeById, calculateChildrenPositions } from '../utils/nodeUtils';
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ const Editor = () => {
 
   // Estado del editor con reducer
   const initialRootNode = useMemo(() =>
-    new MindMapNode('root', 'Tema Central', 400, 300, 'root'), []
+    new MindMapNode('root', 'Tema Central', 200, 400, 'root'), []
   );
   const [state, dispatch] = useReducer(editorReducer, initialRootNode, getInitialState);
 
@@ -29,7 +29,49 @@ const Editor = () => {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
 
+  // Estados para pan del canvas
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+
+  // Estado para mostrar/ocultar sidebar
+  const [sidebarVisible, setSidebarVisible] = useState(true);
+
   const iaService = useMemo(() => new IAService(), []);
+  const [spacePressed, setSpacePressed] = useState(false);
+
+  // Detectar tecla Espacio para modo pan
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Espacio para pan
+      if (e.code === 'Space' && !editingNodeId) {
+        e.preventDefault();
+        setSpacePressed(true);
+      }
+
+      // F9 para toggle sidebar
+      if (e.key === 'F9') {
+        e.preventDefault();
+        setSidebarVisible(prev => !prev);
+      }
+    };
+
+    const handleKeyUp = (e) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+        setIsPanning(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [editingNodeId]);
 
   // Obtener el nodo seleccionado actual del árbol
   const selectedNode = useMemo(() => {
@@ -96,8 +138,20 @@ const Editor = () => {
   const handleAddNode = () => {
     if (!selectedNode) return;
 
-    const offsetX = (selectedNode.children?.length || 0) * 150;
-    const newChild = selectedNode.createChild('Nuevo nodo', offsetX, 200, 'child');
+    const verticalSpacing = 120;
+    const horizontalOffset = 300;
+    const childrenCount = selectedNode.children?.length || 0;
+
+    // Calcular posición vertical basada en el número de hijos existentes
+    const offsetY = childrenCount * verticalSpacing;
+
+    const newChild = new MindMapNode(
+      `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      'Nuevo nodo',
+      selectedNode.x + horizontalOffset, // A la derecha
+      selectedNode.y + offsetY, // Debajo del último hijo
+      'child'
+    );
 
     dispatch(actionCreators.addChild(selectedNodeId, newChild));
   };
@@ -115,13 +169,8 @@ const Editor = () => {
 
   // Resetear la vista
   const handleResetView = () => {
-    if (canvasRef.current) {
-      canvasRef.current.scrollTo({
-        top: 0,
-        left: 0,
-        behavior: 'smooth'
-      });
-    }
+    setCanvasOffset({ x: 0, y: 0 });
+    setZoom(1);
   };
 
   // Actualizar texto en edición
@@ -145,16 +194,18 @@ const Editor = () => {
     // Generar nodos hijos SOLO si no se han generado antes
     if (!editingNode.hasGeneratedChildren) {
       const responses = iaService.getMockResponses(editingText);
-      const spacing = 250;
-      const startX = -((responses.length - 1) * spacing) / 2;
+      const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);
 
       const childrenNodes = responses.map((text, index) => {
-        return editingNode.createChild(
+        const position = positions[index];
+        const childNode = new MindMapNode(
+          `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
           text,
-          startX + (index * spacing),
-          200,
+          position.x,
+          position.y,
           'child'
         );
+        return childNode;
       });
 
       dispatch(actionCreators.addChildren(editingNodeId, childrenNodes));
@@ -166,20 +217,37 @@ const Editor = () => {
 
   const renderNodes = (node) => {
     const isSelected = selectedNode && selectedNode.id === node.id;
+    const isDragging = draggingNodeId === node.id;
+
     return (
       <div key={node.id}>
         <div
-          onClick={(e) => !draggingNode && handleNodeClick(e, node)}
-          onMouseDown={(e) => {
-            e.stopPropagation();
-            handleMouseDown(e, node);
+          onClick={(e) => {
+            if (!draggingNodeId) {
+              handleNodeClick(e, node);
+            }
           }}
-          style={{ position: 'relative', cursor: draggingNode === node.id ? 'grabbing' : 'grab' }}
+          onDoubleClick={(e) => {
+            e.stopPropagation();
+            handleNodeDoubleClick(e, node);
+          }}
+          onMouseDown={(e) => {
+            if (editingNodeId !== node.id) {
+              e.stopPropagation();
+              handleMouseDown(e, node);
+            }
+          }}
+          style={{
+            position: 'relative',
+            cursor: isDragging ? 'grabbing' : 'pointer',
+            zIndex: isDragging ? 1000 : 'auto'
+          }}
         >
           <Node
             node={{...node, text: editingNodeId === node.id ? editingText : node.text}}
             isEditing={editingNodeId === node.id}
             isSelected={isSelected}
+            isDragging={isDragging}
             onTextChange={handleTextChange}
             onSubmit={handleSubmit}
             isLoading={isLoading}
@@ -198,38 +266,91 @@ const Editor = () => {
   const handleMouseDown = (e, node) => {
     if (editingNodeId !== null) return;
     e.preventDefault();
-    setDraggingNode(node.id);
-    setDragOffset({
-      x: e.clientX - node.x,
-      y: e.clientY - node.y
-    });
+    e.stopPropagation();
+
+    setDraggingNodeId(node.id);
+
+    // Obtener el canvas y su posición
+    const canvas = canvasRef.current;
+    const canvasRect = canvas.getBoundingClientRect();
+
+    // Calcular el offset considerando zoom y pan
+    const mouseX = (e.clientX - canvasRect.left - canvasOffset.x) / zoom;
+    const mouseY = (e.clientY - canvasRect.top - canvasOffset.y) / zoom;
+
+    const offsetX = mouseX - node.x;
+    const offsetY = mouseY - node.y;
+
+    setDragOffset({ x: offsetX, y: offsetY });
   };
 
   const handleMouseMove = (e) => {
-    if (!draggingNode) return;
-    
-    const rootnode = rootnodeRef.current;
-    const updateNodePosition = (node) => {
-      if (node.id === draggingNode) {
-        node.x = e.clientX - dragOffset.x;
-        node.y = e.clientY - dragOffset.y;
-        return true;
-      }
-      if (node.children) {
-        for (let child of node.children) {
-          if (updateNodePosition(child)) return true;
-        }
-      }
-      return false;
-    };
-    
-    if (updateNodePosition(rootnode)) {
-      setRender({});
+    // Manejar pan del canvas (con rueda/botón central o espacio + click)
+    if (isPanning) {
+      const deltaX = e.clientX - panStart.x;
+      const deltaY = e.clientY - panStart.y;
+
+      setCanvasOffset({
+        x: canvasOffset.x + deltaX,
+        y: canvasOffset.y + deltaY
+      });
+
+      setPanStart({ x: e.clientX, y: e.clientY });
+      return;
+    }
+
+    // Manejar drag de nodos
+    if (draggingNodeId) {
+      const canvas = canvasRef.current;
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Calcular nueva posición considerando zoom y offset del canvas
+      const newX = (e.clientX - canvasRect.left - canvasOffset.x) / zoom - dragOffset.x;
+      const newY = (e.clientY - canvasRect.top - canvasOffset.y) / zoom - dragOffset.y;
+
+      dispatch(actionCreators.updateNodePosition(draggingNodeId, newX, newY));
     }
   };
 
   const handleMouseUp = () => {
-    setDraggingNode(null);
+    if (draggingNodeId) {
+      setDraggingNodeId(null);
+      setDragOffset({ x: 0, y: 0 });
+    }
+    if (isPanning) {
+      setIsPanning(false);
+    }
+  };
+
+  // Iniciar pan del canvas
+  const handleCanvasMouseDown = (e) => {
+    // Pan con botón central (rueda), Espacio + click izquierdo, o click directo en el fondo
+    if (e.button === 1 || (e.button === 0 && spacePressed) || (e.button === 0 && e.target === e.currentTarget)) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX, y: e.clientY });
+    }
+  };
+
+  // Zoom con la rueda del ratón
+  const handleWheel = (e) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      const newZoom = Math.min(Math.max(0.1, zoom * delta), 3);
+
+      setZoom(newZoom);
+    }
+  };
+
+  // Funciones de zoom
+  const handleZoomIn = () => {
+    setZoom(prev => Math.min(prev * 1.2, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom(prev => Math.max(prev * 0.8, 0.1));
   };
 
   return (
@@ -271,23 +392,65 @@ const Editor = () => {
           onAddNode={handleAddNode}
           onDeleteNode={handleDeleteNode}
           onResetView={handleResetView}
+          onZoomIn={handleZoomIn}
+          onZoomOut={handleZoomOut}
+          zoom={zoom}
         />
       </div>
 
       {/* Canvas */}
       <div
-        className="editor-canvas"
+        ref={canvasRef}
+        className={`editor-canvas ${draggingNodeId ? 'dragging' : ''} ${isPanning ? 'panning' : ''}`}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
+        onMouseDown={handleCanvasMouseDown}
         onClick={handleCanvasClick}
+        onWheel={handleWheel}
+        style={{
+          cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (spacePressed ? 'grab' : 'default')),
+          overflow: 'hidden'
+        }}
       >
-        {renderNodes(rootnodeRef.current)}
+        <div
+          onMouseDown={(e) => {
+            // Si se hace clic directamente en este div (no en los nodos), activar pan
+            if (e.target === e.currentTarget && e.button === 0) {
+              e.preventDefault();
+              setIsPanning(true);
+              setPanStart({ x: e.clientX, y: e.clientY });
+            }
+          }}
+          style={{
+            position: 'relative',
+            minWidth: '100%',
+            minHeight: '100%',
+            width: 'max-content',
+            height: 'max-content',
+            transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            transition: isPanning || draggingNodeId ? 'none' : 'transform 0.1s ease-out',
+            cursor: isPanning ? 'grabbing' : 'grab'
+          }}
+        >
+          {renderNodes(state.tree)}
+        </div>
       </div>
 
       {/* Properties Panel */}
-      <aside className="editor-sidebar">
-        <h3 className="sidebar-title">Propiedades</h3>
+      <aside className={`editor-sidebar ${sidebarVisible ? 'visible' : 'hidden'}`}>
+        <div className="sidebar-header">
+          <h3 className="sidebar-title">Propiedades</h3>
+          <button
+            className="sidebar-toggle-btn"
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            title={sidebarVisible ? 'Ocultar propiedades (F9)' : 'Mostrar propiedades (F9)'}
+          >
+            {sidebarVisible ? '→' : '←'}
+          </button>
+        </div>
+
         {selectedNode ? (
           <div className="properties-panel">
             <div className="property-group">
@@ -362,6 +525,20 @@ const Editor = () => {
           <p className="sidebar-placeholder">Haz clic en un nodo para ver sus propiedades</p>
         )}
       </aside>
+
+      {/* Botón flotante para abrir sidebar cuando está oculto */}
+      {!sidebarVisible && (
+        <button
+          className="sidebar-floating-btn"
+          onClick={() => setSidebarVisible(true)}
+          title="Mostrar propiedades (F9)"
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            ← Propiedades
+            <span style={{ fontSize: '11px', opacity: 0.6 }}>F9</span>
+          </span>
+        </button>
+      )}
     </div>
   );
 };

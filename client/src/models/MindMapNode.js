@@ -13,7 +13,7 @@ class MindMapNode {
     this.width = 200;
     this.height = 80;
     this.fontSize = 16;
-    this.backgroundColor = '#ffffff';
+    this.backgroundColor = '##0f1419';
     this.borderColor = '#8b5cf6';
     this.borderWidth = 2;
 

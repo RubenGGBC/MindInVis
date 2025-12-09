@@ -7,7 +7,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.3s;
+    transition: box-shadow 0.3s, border-color 0.3s;
+  }
+
+  .mindmap-node.dragging {
+    transition: none;
+    z-index: 1000;
   }
 
   .node-edit-mode {

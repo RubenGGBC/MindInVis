@@ -1,6 +1,7 @@
 
      Fase 1: Reestructurar Gestión de Estado (CRÍTICO)
 
+
      Archivo: Editor.jsx
      - Eliminar useRef para rootNode y usar useState con estructura inmutable
      - Implementar useReducer para manejar todas las acciones del editor (add, delete, edit, 

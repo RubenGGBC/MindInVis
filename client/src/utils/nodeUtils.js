@@ -239,3 +239,64 @@ export function traverseTree(tree, fn, depth = 0, path = []) {
     });
   }
 }
+
+/**
+ * Calcula posiciones de nodos hijos sin colisiones
+ * @param {Object} parentNode - Nodo padre
+ * @param {number} childrenCount - Número de nodos hijos a crear
+ * @param {Object} tree - Árbol completo para verificar colisiones
+ * @returns {Array} - Array de posiciones {x, y}
+ */
+export function calculateChildrenPositions(parentNode, childrenCount, tree) {
+  const horizontalOffset = 300;
+  const minVerticalSpacing = 150;
+  
+  // Obtener todos los nodos existentes para detectar colisiones
+  const allNodes = [];
+  traverseTree(tree, (node) => {
+    allNodes.push(node);
+  });
+  
+  // Calcular altura aproximada de cada nodo
+  const nodeHeight = 100;
+  
+  // Calcular espaciado requerido
+  const totalHeight = (childrenCount - 1) * minVerticalSpacing;
+  const startY = -totalHeight / 2;
+  
+  const positions = [];
+  
+  for (let i = 0; i < childrenCount; i++) {
+    let proposedY = parentNode.y + startY + (i * minVerticalSpacing);
+    let proposedX = parentNode.x + horizontalOffset;
+    
+    // Verificar colisiones con otros nodos y ajustar
+    let hasCollision = true;
+    let adjustedY = proposedY;
+    let attempts = 0;
+    
+    while (hasCollision && attempts < 10) {
+      hasCollision = allNodes.some(node => {
+        if (node.x === parentNode.x && node.y === parentNode.y) return false; // Ignorar el padre
+        
+        const xDist = Math.abs(proposedX - node.x);
+        const yDist = Math.abs(adjustedY - node.y);
+        
+        // Espacio mínimo requerido entre nodos
+        const minXDist = 350;
+        const minYDist = 150;
+        
+        return xDist < minXDist && yDist < minYDist;
+      });
+      
+      if (hasCollision) {
+        adjustedY += minVerticalSpacing;
+        attempts++;
+      }
+    }
+    
+    positions.push({ x: proposedX, y: adjustedY });
+  }
+  
+  return positions;
+}
