@@ -8,6 +8,8 @@ class MindMapNode {
     // Posición
     this.x = x;
     this.y = y;
+    this.initialX = x;
+    this.initialY = y;
 
     // Dimensiones y estilo
     this.width = 200;
@@ -21,6 +23,7 @@ class MindMapNode {
     this.children = [];
 
     // Metadatos
+    this.collapsed = false;
     this.hasGeneratedChildren = false;
     this.createdAt = Date.now();
     this.lastModified = Date.now();
@@ -60,12 +63,15 @@ class MindMapNode {
       tipo: this.tipo,
       x: this.x,
       y: this.y,
+      initialX: this.initialX,
+      initialY: this.initialY,
       width: this.width,
       height: this.height,
       fontSize: this.fontSize,
       backgroundColor: this.backgroundColor,
       borderColor: this.borderColor,
       borderWidth: this.borderWidth,
+      collapsed: this.collapsed,
       hasGeneratedChildren: this.hasGeneratedChildren,
       createdAt: this.createdAt,
       lastModified: this.lastModified,
@@ -103,6 +109,10 @@ class MindMapNode {
       data.tipo || 'default'
     );
 
+    // Restaurar posiciones iniciales
+    node.initialX = typeof data.initialX === 'number' ? data.initialX : data.x;
+    node.initialY = typeof data.initialY === 'number' ? data.initialY : data.y;
+
     // Restaurar propiedades visuales con valores por defecto
     node.width = typeof data.width === 'number' && data.width > 0 ? data.width : 200;
     node.height = typeof data.height === 'number' && data.height > 0 ? data.height : 80;
@@ -112,6 +122,7 @@ class MindMapNode {
     node.borderWidth = typeof data.borderWidth === 'number' && data.borderWidth >= 0 ? data.borderWidth : 2;
 
     // Restaurar metadatos
+    node.collapsed = Boolean(data.collapsed);
     node.hasGeneratedChildren = Boolean(data.hasGeneratedChildren);
     node.createdAt = typeof data.createdAt === 'number' ? data.createdAt : Date.now();
     node.lastModified = typeof data.lastModified === 'number' ? data.lastModified : Date.now();
@@ -145,12 +156,15 @@ class MindMapNode {
       this.tipo
     );
 
+    cloned.initialX = this.initialX;
+    cloned.initialY = this.initialY;
     cloned.width = this.width;
     cloned.height = this.height;
     cloned.fontSize = this.fontSize;
     cloned.backgroundColor = this.backgroundColor;
     cloned.borderColor = this.borderColor;
     cloned.borderWidth = this.borderWidth;
+    cloned.collapsed = this.collapsed;
     cloned.hasGeneratedChildren = this.hasGeneratedChildren;
 
     return cloned;

@@ -300,3 +300,25 @@ export function calculateChildrenPositions(parentNode, childrenCount, tree) {
   
   return positions;
 }
+
+/**
+ * Resetea todas las posiciones de los nodos a sus posiciones iniciales
+ * @param {Object} tree - Nodo raíz del árbol
+ * @returns {Object} - Nuevo árbol con las posiciones reseteadas
+ */
+export function resetAllPositions(tree) {
+  if (!tree) return null;
+
+  const resetNode = {
+    ...tree,
+    x: tree.initialX || tree.x,
+    y: tree.initialY || tree.y,
+    lastModified: Date.now()
+  };
+
+  if (tree.children && tree.children.length > 0) {
+    resetNode.children = tree.children.map(child => resetAllPositions(child));
+  }
+
+  return resetNode;
+}

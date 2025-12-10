@@ -1,4 +1,4 @@
-import { updateNode, addChildToNode, deleteNode } from '../utils/nodeUtils';
+import { updateNode, addChildToNode, deleteNode, resetAllPositions } from '../utils/nodeUtils';
 
 /**
  * Tipos de acciones para el reducer del editor
@@ -11,7 +11,9 @@ export const ACTIONS = {
   ADD_CHILDREN: 'ADD_CHILDREN',
   DELETE_NODE: 'DELETE_NODE',
   SET_TREE: 'SET_TREE',
-  MARK_CHILDREN_GENERATED: 'MARK_CHILDREN_GENERATED'
+  MARK_CHILDREN_GENERATED: 'MARK_CHILDREN_GENERATED',
+  TOGGLE_COLLAPSE: 'TOGGLE_COLLAPSE',
+  RESET_POSITIONS: 'RESET_POSITIONS'
 };
 
 /**
@@ -125,6 +127,24 @@ export function editorReducer(state, action) {
       };
     }
 
+    case ACTIONS.TOGGLE_COLLAPSE: {
+      const { nodeId } = action.payload;
+      const newTree = updateNode(state.tree, nodeId, (node) => ({
+        collapsed: !node.collapsed,
+        lastModified: Date.now()
+      }));
+
+      return {
+        ...state,
+        tree: newTree
+      };
+    }
+
+    case ACTIONS.RESET_POSITIONS: {
+      const newTree = resetAllPositions(state.tree);
+      return addToHistory(state, newTree);
+    }
+
     default:
       return state;
   }
@@ -225,5 +245,15 @@ export const actionCreators = {
   markChildrenGenerated: (nodeId) => ({
     type: ACTIONS.MARK_CHILDREN_GENERATED,
     payload: { nodeId }
+  }),
+
+  toggleCollapse: (nodeId) => ({
+    type: ACTIONS.TOGGLE_COLLAPSE,
+    payload: { nodeId }
+  }),
+
+  resetPositions: () => ({
+    type: ACTIONS.RESET_POSITIONS,
+    payload: {}
   })
 };

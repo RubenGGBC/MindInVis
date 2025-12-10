@@ -156,6 +156,24 @@ const Editor = () => {
     dispatch(actionCreators.addChild(selectedNodeId, newChild));
   };
 
+  const handleAddChildToNode = (parentNode) => {
+    const verticalSpacing = 120;
+    const horizontalOffset = 300;
+    const childrenCount = parentNode.children?.length || 0;
+
+    const offsetY = childrenCount * verticalSpacing;
+
+    const newChild = new MindMapNode(
+      `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      'Nuevo nodo',
+      parentNode.x + horizontalOffset,
+      parentNode.y + offsetY,
+      'child'
+    );
+
+    dispatch(actionCreators.addChild(parentNode.id, newChild));
+  };
+
   // Eliminar un nodo
   const handleDeleteNode = () => {
     if (!selectedNode || selectedNode.id === 'root') {
@@ -165,6 +183,16 @@ const Editor = () => {
 
     dispatch(actionCreators.deleteNode(selectedNodeId));
     setSelectedNodeId(null);
+  };
+
+  // Toggle colapsar/expandir nodo
+  const handleToggleCollapse = (node) => {
+    dispatch(actionCreators.toggleCollapse(node.id));
+  };
+
+  // Reorganizar todos los nodos a sus posiciones iniciales
+  const handleReorganize = () => {
+    dispatch(actionCreators.resetPositions());
   };
 
   // Resetear la vista
@@ -251,9 +279,11 @@ const Editor = () => {
             onTextChange={handleTextChange}
             onSubmit={handleSubmit}
             isLoading={isLoading}
+            onAddChild={handleAddChildToNode}
+            onToggleCollapse={handleToggleCollapse}
           />
         </div>
-        {node.children && node.children.map((child) => (
+        {!node.collapsed && node.children && node.children.map((child) => (
           <div key={`connection-${child.id}`}>
             <ConnectionLine parentNode={node} childNode={child} />
             {renderNodes(child)}
@@ -395,6 +425,7 @@ const Editor = () => {
           onZoomIn={handleZoomIn}
           onZoomOut={handleZoomOut}
           zoom={zoom}
+          onReorganize={handleReorganize}
         />
       </div>
 

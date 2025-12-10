@@ -1,7 +1,7 @@
-import { Plus, Trash2, Circle, Square, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { Plus, Trash2, Circle, Square, ZoomIn, ZoomOut, Maximize2, LayoutGrid } from 'lucide-react';
 import './Toolbar.css';
 
-const Toolbar = ({ selectedNode, onAddNode, onDeleteNode, onResetView, onZoomIn, onZoomOut, zoom }) => {
+const Toolbar = ({ selectedNode, onAddNode, onDeleteNode, onResetView, onZoomIn, onZoomOut, zoom, onReorganize }) => {
   return (
     <div className="toolbar-container">
       <div className="toolbar-group">
@@ -23,6 +23,14 @@ const Toolbar = ({ selectedNode, onAddNode, onDeleteNode, onResetView, onZoomIn,
         >
           <Trash2 size={18} />
           <span>Eliminar</span>
+        </button>
+        <button
+          className="toolbar-btn"
+          onClick={onReorganize}
+          title="Reorganizar nodos a posiciones iniciales"
+        >
+          <LayoutGrid size={18} />
+          <span>Reorganizar</span>
         </button>
       </div>
 
