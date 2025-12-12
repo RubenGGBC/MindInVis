@@ -7,11 +7,11 @@
   --cyan-light: #26c6da;
   --purple: #6a4c93;
   --purple-light: #8b5fc8;
-  --background: #0f1419;
-  --surface: #1a1f2e;
-  --text-primary: #ffffff;
-  --text-secondary: #b0b8c8;
-  --border: #2d3548;
+  --background: #f0f2f5; /* Changed from dark to light */
+  --surface: #ffffff; /* Changed from dark to white */
+  --text-primary: #1a1f2e; /* Changed from white to dark */
+  --text-secondary: #5e6c84; /* Changed from light grey to darker grey */
+  --border: #cccccc; /* Changed from dark grey to lighter grey */
 }
 
 * {

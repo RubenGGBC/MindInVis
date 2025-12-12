@@ -1,7 +1,16 @@
-import { Plus, Trash2, Circle, Square, ZoomIn, ZoomOut, Maximize2, LayoutGrid } from 'lucide-react';
+import { Plus, Trash2, LayoutGrid, Undo, Redo } from 'lucide-react';
 import './Toolbar.css';
 
-const Toolbar = ({ selectedNode, onAddNode, onDeleteNode, onResetView, onZoomIn, onZoomOut, zoom, onReorganize }) => {
+const Toolbar = ({
+  selectedNode,
+  onAddNode,
+  onDeleteNode,
+  onReorganize,
+  onUndo,
+  onRedo,
+  canUndo,
+  canRedo,
+}) => {
   return (
     <div className="toolbar-container">
       <div className="toolbar-group">
@@ -33,42 +42,25 @@ const Toolbar = ({ selectedNode, onAddNode, onDeleteNode, onResetView, onZoomIn,
           <span>Reorganizar</span>
         </button>
       </div>
-
-      <div className="toolbar-divider"></div>
-
       <div className="toolbar-group">
-        <span className="toolbar-group-label">Vista</span>
+        <span className="toolbar-group-label">Historial</span>
         <button
           className="toolbar-btn"
-          onClick={onZoomOut}
-          title="Alejar (Ctrl + Rueda arriba)"
-          disabled={zoom <= 0.1}
+          onClick={onUndo}
+          title="Deshacer"
+          disabled={!canUndo}
         >
-          <ZoomOut size={18} />
-        </button>
-        <span style={{
-          fontSize: '13px',
-          color: 'var(--text-secondary)',
-          minWidth: '50px',
-          textAlign: 'center'
-        }}>
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          className="toolbar-btn"
-          onClick={onZoomIn}
-          title="Acercar (Ctrl + Rueda abajo)"
-          disabled={zoom >= 3}
-        >
-          <ZoomIn size={18} />
+          <Undo size={18} />
+          <span>Deshacer</span>
         </button>
         <button
           className="toolbar-btn"
-          onClick={onResetView}
-          title="Resetear vista - Arrastra el fondo para mover el canvas"
+          onClick={onRedo}
+          title="Rehacer"
+          disabled={!canRedo}
         >
-          <Maximize2 size={18} />
-          <span>Resetear</span>
+          <Redo size={18} />
+          <span>Rehacer</span>
         </button>
       </div>
     </div>

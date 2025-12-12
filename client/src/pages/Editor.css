@@ -103,7 +103,7 @@
 
 .editor-btn.primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(77, 208, 225, 0.4);
+  box-shadow: 0 8px 20px var(--cyan); /* Changed to use var(--cyan) */
 }
 
 /* Toolbar */

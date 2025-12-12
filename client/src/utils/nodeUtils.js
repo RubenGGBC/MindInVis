@@ -322,3 +322,25 @@ export function resetAllPositions(tree) {
 
   return resetNode;
 }
+
+/**
+ * Encuentra el nodo padre de un nodo específico
+ * @param {Object} tree - Nodo raíz del árbol
+ * @param {string} nodeId - ID del nodo hijo
+ * @returns {Object|null} - El nodo padre encontrado o null
+ */
+export function findParentNode(tree, nodeId) {
+  if (!tree || !tree.children) return null;
+
+  for (const child of tree.children) {
+    if (child.id === nodeId) {
+      return tree;
+    }
+    const foundParent = findParentNode(child, nodeId);
+    if (foundParent) {
+      return foundParent;
+    }
+  }
+
+  return null;
+}

@@ -1,4 +1,4 @@
-import { updateNode, addChildToNode, deleteNode, resetAllPositions } from '../utils/nodeUtils';
+import { updateNode, addChildToNode, deleteNode, resetAllPositions, findNodeById } from '../utils/nodeUtils';
 
 /**
  * Tipos de acciones para el reducer del editor
@@ -13,7 +13,10 @@ export const ACTIONS = {
   SET_TREE: 'SET_TREE',
   MARK_CHILDREN_GENERATED: 'MARK_CHILDREN_GENERATED',
   TOGGLE_COLLAPSE: 'TOGGLE_COLLAPSE',
-  RESET_POSITIONS: 'RESET_POSITIONS'
+  RESET_POSITIONS: 'RESET_POSITIONS',
+  SWAP_NODES: 'SWAP_NODES',
+  UNDO: 'UNDO',
+  REDO: 'REDO'
 };
 
 /**
@@ -145,6 +148,52 @@ export function editorReducer(state, action) {
       return addToHistory(state, newTree);
     }
 
+    case ACTIONS.SWAP_NODES: {
+      const { sourceNodeId, targetNodeId } = action.payload;
+      const sourceNode = findNodeById(state.tree, sourceNodeId);
+      const targetNode = findNodeById(state.tree, targetNodeId);
+
+      if (!sourceNode || !targetNode) {
+        return state;
+      }
+
+      let newTree = updateNode(state.tree, sourceNodeId, () => ({
+        x: targetNode.x,
+        y: targetNode.y,
+      }));
+
+      newTree = updateNode(newTree, targetNodeId, () => ({
+        x: sourceNode.x,
+        y: sourceNode.y,
+      }));
+
+      return addToHistory(state, newTree);
+    }
+
+    case ACTIONS.UNDO: {
+      if (state.historyIndex > 0) {
+        const newHistoryIndex = state.historyIndex - 1;
+        return {
+          ...state,
+          tree: state.history[newHistoryIndex],
+          historyIndex: newHistoryIndex
+        };
+      }
+      return state;
+    }
+
+    case ACTIONS.REDO: {
+      if (state.historyIndex < state.history.length - 1) {
+        const newHistoryIndex = state.historyIndex + 1;
+        return {
+          ...state,
+          tree: state.history[newHistoryIndex],
+          historyIndex: newHistoryIndex
+        };
+      }
+      return state;
+    }
+
     default:
       return state;
   }
@@ -255,5 +304,13 @@ export const actionCreators = {
   resetPositions: () => ({
     type: ACTIONS.RESET_POSITIONS,
     payload: {}
-  })
+  }),
+
+  swapNodes: (sourceNodeId, targetNodeId) => ({
+    type: ACTIONS.SWAP_NODES,
+    payload: { sourceNodeId, targetNodeId }
+  }),
+
+  undo: () => ({ type: ACTIONS.UNDO }),
+  redo: () => ({ type: ACTIONS.REDO })
 };

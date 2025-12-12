@@ -1,18 +1,85 @@
-import { useState, useReducer, useEffect, useRef, useMemo } from 'react';
+import { useState, useReducer, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Save, Share2 } from 'lucide-react';
+import ReactFlow, {
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  addEdge,
+  MiniMap,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
 import './Editor.css';
-import Node from '../components/editor/Node';
-import ConnectionLine from '../components/editor/ConnectionLine';
 import Toolbar from '../components/editor/Toolbar';
 import MindMapNode from '../models/MindMapNode';
 import IAService from '../services/IAServices';
 import { editorReducer, getInitialState, actionCreators } from '../reducers/editorReducer';
-import { findNodeById, calculateChildrenPositions } from '../utils/nodeUtils';
+import { findNodeById, calculateChildrenPositions, findParentNode } from '../utils/nodeUtils';
+import ReactFlowNode from '../components/editor/ReactFlowNode';
+
+const nodeTypes = {
+  custom: ReactFlowNode,
+};
+
+const treeToFlow = (
+  node,
+  editingNodeId,
+  editingText,
+  onNodeDoubleClick,
+  onNodeClick,
+  onAddChild,
+  onToggleCollapse,
+  onTextChange,
+  onSubmit,
+  isLoading,
+  selectedNodeId
+) => {
+  const nodes = [];
+  const edges = [];
+
+  function traverse(node, parentId = null) {
+    const isEditing = editingNodeId === node.id;
+    nodes.push({
+      id: node.id,
+      type: 'custom',
+      position: { x: node.x, y: node.y },
+      data: {
+        node: { ...node, text: isEditing ? editingText : node.text },
+        isEditing,
+        onTextChange,
+        onSubmit,
+        isLoading,
+        onNodeDoubleClick,
+        onNodeClick,
+        onAddChild,
+        onToggleCollapse,
+        selected: node.id === selectedNodeId,
+      },
+    });
+
+    if (parentId) {
+      edges.push({
+        id: `e${parentId}-${node.id}`,
+        source: parentId,
+        target: node.id,
+        animated: true,
+      });
+    }
+
+    if (node.children && !node.collapsed) {
+      node.children.forEach(child => traverse(child, node.id));
+    }
+  }
+
+  traverse(node);
+  return { nodes, edges };
+};
+
 
 const Editor = () => {
   const navigate = useNavigate();
-  const canvasRef = useRef(null);
 
   // Estado del editor con reducer
   const initialRootNode = useMemo(() =>
@@ -20,36 +87,29 @@ const Editor = () => {
   );
   const [state, dispatch] = useReducer(editorReducer, initialRootNode, getInitialState);
 
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const onConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges],
+  );
+
   // Estados UI
   const [mapName, setMapName] = useState('Mapa sin título');
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [draggingNodeId, setDraggingNodeId] = useState(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [selectedNodeId, setSelectedNodeId] = useState(null);
-
-  // Estados para pan del canvas
-  const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState({ x: 0, y: 0 });
-  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
 
   // Estado para mostrar/ocultar sidebar
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
   const iaService = useMemo(() => new IAService(), []);
-  const [spacePressed, setSpacePressed] = useState(false);
 
   // Detectar tecla Espacio para modo pan
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Espacio para pan
-      if (e.code === 'Space' && !editingNodeId) {
-        e.preventDefault();
-        setSpacePressed(true);
-      }
-
       // F9 para toggle sidebar
       if (e.key === 'F9') {
         e.preventDefault();
@@ -57,19 +117,10 @@ const Editor = () => {
       }
     };
 
-    const handleKeyUp = (e) => {
-      if (e.code === 'Space') {
-        setSpacePressed(false);
-        setIsPanning(false);
-      }
-    };
-
     window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     };
   }, [editingNodeId]);
 
@@ -78,6 +129,7 @@ const Editor = () => {
     if (!selectedNodeId) return null;
     return findNodeById(state.tree, selectedNodeId);
   }, [state.tree, selectedNodeId]);
+
 
   // Sincronizar nodeProperties con el nodo seleccionado
   const nodeProperties = useMemo(() => {
@@ -102,40 +154,34 @@ const Editor = () => {
   }, [selectedNode]);
 
   // Manejador de clic simple: seleccionar nodo
-  const handleNodeClick = (e, node) => {
+  const handleNodeClick = useCallback((e, node) => {
     if (e.button !== 0) return;
     e.stopPropagation();
-
-    // Solo seleccionar si no estamos arrastrando
-    if (!draggingNodeId) {
-      setSelectedNodeId(node.id);
-    }
-  };
+    setSelectedNodeId(node.id);
+  }, []);
 
   // Manejador de doble clic: entrar en modo edición
-  const handleNodeDoubleClick = (e, node) => {
+  const handleNodeDoubleClick = useCallback((e, node) => {
     e.stopPropagation();
     setEditingNodeId(node.id);
     setEditingText(node.text);
     setSelectedNodeId(null); // Deseleccionar mientras editamos
-  };
+  }, []);
 
   // Actualizar una propiedad del nodo
-  const handlePropertyChange = (property, value) => {
+  const handlePropertyChange = useCallback((property, value) => {
     if (!selectedNodeId) return;
 
     dispatch(actionCreators.updateNodeProperty(selectedNodeId, property, value));
-  };
+  }, [selectedNodeId]);
 
-  // Deseleccionar al hacer clic en el canvas
-  const handleCanvasClick = () => {
-    if (!editingNodeId) {
-      setSelectedNodeId(null);
-    }
-  };
+  const handleCanvasClick = useCallback(() => {
+    setEditingNodeId(null);
+    setSelectedNodeId(null);
+  }, []);
 
   // Añadir un nodo hijo
-  const handleAddNode = () => {
+  const handleAddNode = useCallback(() => {
     if (!selectedNode) return;
 
     const verticalSpacing = 120;
@@ -154,9 +200,9 @@ const Editor = () => {
     );
 
     dispatch(actionCreators.addChild(selectedNodeId, newChild));
-  };
+  }, [selectedNode, selectedNodeId]);
 
-  const handleAddChildToNode = (parentNode) => {
+  const handleAddChildToNode = useCallback((parentNode) => {
     const verticalSpacing = 120;
     const horizontalOffset = 300;
     const childrenCount = parentNode.children?.length || 0;
@@ -172,10 +218,10 @@ const Editor = () => {
     );
 
     dispatch(actionCreators.addChild(parentNode.id, newChild));
-  };
+  }, []);
 
   // Eliminar un nodo
-  const handleDeleteNode = () => {
+  const handleDeleteNode = useCallback(() => {
     if (!selectedNode || selectedNode.id === 'root') {
       alert('No puedes eliminar el nodo raíz');
       return;
@@ -183,31 +229,36 @@ const Editor = () => {
 
     dispatch(actionCreators.deleteNode(selectedNodeId));
     setSelectedNodeId(null);
-  };
+  }, [selectedNode, selectedNodeId]);
 
   // Toggle colapsar/expandir nodo
-  const handleToggleCollapse = (node) => {
+  const handleToggleCollapse = useCallback((node) => {
     dispatch(actionCreators.toggleCollapse(node.id));
-  };
+  }, []);
 
   // Reorganizar todos los nodos a sus posiciones iniciales
   const handleReorganize = () => {
     dispatch(actionCreators.resetPositions());
   };
 
+  const handleUndo = () => dispatch(actionCreators.undo());
+  const handleRedo = () => dispatch(actionCreators.redo());
+
+  const canUndo = state.historyIndex > 0;
+  const canRedo = state.historyIndex < state.history.length - 1;
+
   // Resetear la vista
   const handleResetView = () => {
-    setCanvasOffset({ x: 0, y: 0 });
-    setZoom(1);
+    // React Flow's controls handle this
   };
 
   // Actualizar texto en edición
-  const handleTextChange = (text) => {
+  const handleTextChange = useCallback((text) => {
     setEditingText(text);
-  };
+  }, []);
 
   // Enviar cambios de texto y generar nodos hijos con IA
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     const editingNode = findNodeById(state.tree, editingNodeId);
 
     if (!editingNode || !editingText.trim()) {
@@ -241,146 +292,67 @@ const Editor = () => {
 
     setEditingNodeId(null);
     setEditingText('');
-  };
+  }, [editingNodeId, editingText, state.tree, iaService]);
 
-  const renderNodes = (node) => {
-    const isSelected = selectedNode && selectedNode.id === node.id;
-    const isDragging = draggingNodeId === node.id;
-
-    return (
-      <div key={node.id}>
-        <div
-          onClick={(e) => {
-            if (!draggingNodeId) {
-              handleNodeClick(e, node);
-            }
-          }}
-          onDoubleClick={(e) => {
-            e.stopPropagation();
-            handleNodeDoubleClick(e, node);
-          }}
-          onMouseDown={(e) => {
-            if (editingNodeId !== node.id) {
-              e.stopPropagation();
-              handleMouseDown(e, node);
-            }
-          }}
-          style={{
-            position: 'relative',
-            cursor: isDragging ? 'grabbing' : 'pointer',
-            zIndex: isDragging ? 1000 : 'auto'
-          }}
-        >
-          <Node
-            node={{...node, text: editingNodeId === node.id ? editingText : node.text}}
-            isEditing={editingNodeId === node.id}
-            isSelected={isSelected}
-            isDragging={isDragging}
-            onTextChange={handleTextChange}
-            onSubmit={handleSubmit}
-            isLoading={isLoading}
-            onAddChild={handleAddChildToNode}
-            onToggleCollapse={handleToggleCollapse}
-          />
-        </div>
-        {!node.collapsed && node.children && node.children.map((child) => (
-          <div key={`connection-${child.id}`}>
-            <ConnectionLine parentNode={node} childNode={child} />
-            {renderNodes(child)}
-          </div>
-        ))}
-      </div>
+  useEffect(() => {
+    const { nodes, edges } = treeToFlow(
+        state.tree,
+        editingNodeId,
+        editingText,
+        handleNodeDoubleClick,
+        handleNodeClick,
+        handleAddChildToNode,
+        handleToggleCollapse,
+        handleTextChange,
+        handleSubmit,
+        isLoading,
+        selectedNodeId // New parameter
     );
-  };
+    setNodes(nodes);
+    setEdges(edges);
+  }, [state.tree, editingNodeId, editingText, isLoading, setNodes, setEdges, handleNodeDoubleClick, handleNodeClick, handleAddChildToNode, handleToggleCollapse, handleTextChange, handleSubmit, selectedNodeId]);
 
-  const handleMouseDown = (e, node) => {
-    if (editingNodeId !== null) return;
-    e.preventDefault();
-    e.stopPropagation();
+  const handleNodeDragStop = useCallback((event, draggedNode) => {
+    const targetNode = nodes.find(
+      (node) =>
+        node.id !== draggedNode.id &&
+        draggedNode.position.x < node.position.x + node.width &&
+        draggedNode.position.x + draggedNode.width > node.position.x &&
+        draggedNode.position.y < node.position.y + node.height &&
+        draggedNode.position.y + draggedNode.height > node.position.y
+    );
 
-    setDraggingNodeId(node.id);
-
-    // Obtener el canvas y su posición
-    const canvas = canvasRef.current;
-    const canvasRect = canvas.getBoundingClientRect();
-
-    // Calcular el offset considerando zoom y pan
-    const mouseX = (e.clientX - canvasRect.left - canvasOffset.x) / zoom;
-    const mouseY = (e.clientY - canvasRect.top - canvasOffset.y) / zoom;
-
-    const offsetX = mouseX - node.x;
-    const offsetY = mouseY - node.y;
-
-    setDragOffset({ x: offsetX, y: offsetY });
-  };
-
-  const handleMouseMove = (e) => {
-    // Manejar pan del canvas (con rueda/botón central o espacio + click)
-    if (isPanning) {
-      const deltaX = e.clientX - panStart.x;
-      const deltaY = e.clientY - panStart.y;
-
-      setCanvasOffset({
-        x: canvasOffset.x + deltaX,
-        y: canvasOffset.y + deltaY
-      });
-
-      setPanStart({ x: e.clientX, y: e.clientY });
-      return;
+          if (targetNode) {
+            // Check if they have roughly the same x coordinate for "same column"
+            // Allowing for a small tolerance
+            const xTolerance = 50; // pixels
+            const areInSameColumn = Math.abs(draggedNode.position.x - targetNode.position.x) < xTolerance;
+    
+            if (areInSameColumn) {
+              dispatch(actionCreators.swapNodes(draggedNode.id, targetNode.id));
+              return;
+            }
+          }
+    const originalNode = findNodeById(state.tree, draggedNode.id);
+    if (originalNode) {
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (n.id === draggedNode.id) {
+            return { ...n, position: { x: originalNode.x, y: originalNode.y } };
+          }
+          return n;
+        })
+      );
     }
-
-    // Manejar drag de nodos
-    if (draggingNodeId) {
-      const canvas = canvasRef.current;
-      const canvasRect = canvas.getBoundingClientRect();
-
-      // Calcular nueva posición considerando zoom y offset del canvas
-      const newX = (e.clientX - canvasRect.left - canvasOffset.x) / zoom - dragOffset.x;
-      const newY = (e.clientY - canvasRect.top - canvasOffset.y) / zoom - dragOffset.y;
-
-      dispatch(actionCreators.updateNodePosition(draggingNodeId, newX, newY));
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (draggingNodeId) {
-      setDraggingNodeId(null);
-      setDragOffset({ x: 0, y: 0 });
-    }
-    if (isPanning) {
-      setIsPanning(false);
-    }
-  };
-
-  // Iniciar pan del canvas
-  const handleCanvasMouseDown = (e) => {
-    // Pan con botón central (rueda), Espacio + click izquierdo, o click directo en el fondo
-    if (e.button === 1 || (e.button === 0 && spacePressed) || (e.button === 0 && e.target === e.currentTarget)) {
-      e.preventDefault();
-      setIsPanning(true);
-      setPanStart({ x: e.clientX, y: e.clientY });
-    }
-  };
-
-  // Zoom con la rueda del ratón
-  const handleWheel = (e) => {
-    if (e.ctrlKey || e.metaKey) {
-      e.preventDefault();
-
-      const delta = e.deltaY > 0 ? 0.9 : 1.1;
-      const newZoom = Math.min(Math.max(0.1, zoom * delta), 3);
-
-      setZoom(newZoom);
-    }
-  };
+  }, [nodes, state.tree]);
 
   // Funciones de zoom
   const handleZoomIn = () => {
-    setZoom(prev => Math.min(prev * 1.2, 3));
+    // React Flow's controls handle this
   };
 
   const handleZoomOut = () => {
-    setZoom(prev => Math.max(prev * 0.8, 0.1));
+    // React Flow's controls handle this
   };
 
   return (
@@ -421,53 +393,33 @@ const Editor = () => {
           selectedNode={selectedNode}
           onAddNode={handleAddNode}
           onDeleteNode={handleDeleteNode}
-          onResetView={handleResetView}
-          onZoomIn={handleZoomIn}
-          onZoomOut={handleZoomOut}
-          zoom={zoom}
           onReorganize={handleReorganize}
+          onUndo={handleUndo}
+          onRedo={handleRedo}
+          canUndo={canUndo}
+          canRedo={canRedo}
         />
       </div>
 
       {/* Canvas */}
-      <div
-        ref={canvasRef}
-        className={`editor-canvas ${draggingNodeId ? 'dragging' : ''} ${isPanning ? 'panning' : ''}`}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onMouseDown={handleCanvasMouseDown}
-        onClick={handleCanvasClick}
-        onWheel={handleWheel}
-        style={{
-          cursor: isPanning ? 'grabbing' : (draggingNodeId ? 'grabbing' : (spacePressed ? 'grab' : 'default')),
-          overflow: 'hidden'
-        }}
-      >
-        <div
-          onMouseDown={(e) => {
-            // Si se hace clic directamente en este div (no en los nodos), activar pan
-            if (e.target === e.currentTarget && e.button === 0) {
-              e.preventDefault();
-              setIsPanning(true);
-              setPanStart({ x: e.clientX, y: e.clientY });
-            }
-          }}
-          style={{
-            position: 'relative',
-            minWidth: '100%',
-            minHeight: '100%',
-            width: 'max-content',
-            height: 'max-content',
-            transform: `translate(${canvasOffset.x}px, ${canvasOffset.y}px) scale(${zoom})`,
-            transformOrigin: '0 0',
-            transition: isPanning || draggingNodeId ? 'none' : 'transform 0.1s ease-out',
-            cursor: isPanning ? 'grabbing' : 'grab'
-          }}
+      <div style={{ width: '100vw', height: '100vh' }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          onClick={handleCanvasClick}
+          onNodeDragStop={handleNodeDragStop}
+          fitView
         >
-          {renderNodes(state.tree)}
-        </div>
+          <Controls />
+          <Background />
+          <MiniMap nodeColor={n => n.data.node.backgroundColor} nodeStrokeWidth={3} zoomable pannable />
+        </ReactFlow>
       </div>
+
 
       {/* Properties Panel */}
       <aside className={`editor-sidebar ${sidebarVisible ? 'visible' : 'hidden'}`}>
