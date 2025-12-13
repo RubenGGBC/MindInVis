@@ -15,8 +15,21 @@ class MindMapNode {
     this.width = 200;
     this.height = 80;
     this.fontSize = 16;
-    this.backgroundColor = '##0f1419';
-    this.borderColor = '#8b5cf6';
+
+    // Asignar colores basados en tipo
+    if (tipo === 'pregunta') {
+      this.backgroundColor = '#1e3a8a';
+      this.borderColor = '#3b82f6';
+    } else if (tipo === 'respuesta') {
+      this.backgroundColor = '#065f46';
+      this.borderColor = '#10b981';
+    } else if (tipo === 'root') {
+      this.backgroundColor = '#581c87';
+      this.borderColor = '#8b5cf6';
+    } else {
+      this.backgroundColor = '#0f1419';
+      this.borderColor = '#8b5cf6';
+    }
     this.borderWidth = 2;
 
     // Relaciones (sin referencia parent para evitar circularidad)
@@ -106,7 +119,7 @@ class MindMapNode {
       data.text,
       data.x,
       data.y,
-      data.tipo || 'default'
+      data.tipo || 'pregunta'
     );
 
     // Restaurar posiciones iniciales

@@ -12,24 +12,25 @@
     "seed": "node database/seed.js"
   },
   "dependencies": {
-    "express": "^4.18.2",
+    "@google/generative-ai": "^0.24.1",
+    "@langchain/anthropic": "^0.0.4",
+    "@langchain/openai": "^0.0.8",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
-    "langchain": "^0.0.208",
-    "@langchain/openai": "^0.0.8",
-    "@langchain/anthropic": "^0.0.4",
-    "pg": "^8.11.3",
-    "mongoose": "^8.0.3",
+    "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "langchain": "^0.0.208",
+    "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
+    "pg": "^8.11.3",
     "winston": "^3.11.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2",
     "eslint": "^8.55.0",
+    "nodemon": "^3.0.2",
     "vitest": "^1.0.4"
   }
 }

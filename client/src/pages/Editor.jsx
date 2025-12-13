@@ -77,6 +77,15 @@ const treeToFlow = (
   return { nodes, edges };
 };
 
+// Determina el tipo de hijo basado en el tipo del padre
+function getChildTipo(parentTipo) {
+  if (parentTipo === 'pregunta' || parentTipo === 'root') {
+    return 'respuesta';
+  } else if (parentTipo === 'respuesta') {
+    return 'pregunta';
+  }
+  return 'respuesta'; // fallback
+}
 
 const Editor = () => {
   const navigate = useNavigate();
@@ -196,7 +205,7 @@ const Editor = () => {
       'Nuevo nodo',
       selectedNode.x + horizontalOffset, // A la derecha
       selectedNode.y + offsetY, // Debajo del último hijo
-      'child'
+      getChildTipo(selectedNode.tipo)
     );
 
     dispatch(actionCreators.addChild(selectedNodeId, newChild));
@@ -214,7 +223,7 @@ const Editor = () => {
       'Nuevo nodo',
       parentNode.x + horizontalOffset,
       parentNode.y + offsetY,
-      'child'
+      getChildTipo(parentNode.tipo)
     );
 
     dispatch(actionCreators.addChild(parentNode.id, newChild));
@@ -258,7 +267,7 @@ const Editor = () => {
   }, []);
 
   // Enviar cambios de texto y generar nodos hijos con IA
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     const editingNode = findNodeById(state.tree, editingNodeId);
 
     if (!editingNode || !editingText.trim()) {
@@ -272,27 +281,42 @@ const Editor = () => {
 
     // Generar nodos hijos SOLO si no se han generado antes
     if (!editingNode.hasGeneratedChildren) {
-      const responses = iaService.getMockResponses(editingText);
-      const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);
+      setIsLoading(true);
 
-      const childrenNodes = responses.map((text, index) => {
-        const position = positions[index];
-        const childNode = new MindMapNode(
-          `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
-          text,
-          position.x,
-          position.y,
-          'child'
+      try {
+        // Llamar a la API real con el tipo de nodo
+        const responses = await iaService.generateNodes(
+          editingText,
+          editingNode.tipo,
+          3 // Cantidad de nodos a generar
         );
-        return childNode;
-      });
 
-      dispatch(actionCreators.addChildren(editingNodeId, childrenNodes));
+        const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);
+
+        const childrenNodes = responses.map((text, index) => {
+          const position = positions[index];
+          const childNode = new MindMapNode(
+            `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+            text,
+            position.x,
+            position.y,
+            getChildTipo(editingNode.tipo)
+          );
+          return childNode;
+        });
+
+        dispatch(actionCreators.addChildren(editingNodeId, childrenNodes));
+      } catch (error) {
+        console.error('Failed to generate nodes:', error);
+        // El error ya está manejado por el fallback en IAService
+      } finally {
+        setIsLoading(false);
+      }
     }
 
     setEditingNodeId(null);
     setEditingText('');
-  }, [editingNodeId, editingText, state.tree, iaService]);
+  }, [editingNodeId, editingText, state.tree, iaService, dispatch]);
 
   useEffect(() => {
     const { nodes, edges } = treeToFlow(

@@ -3,6 +3,9 @@ import { updateNode, addChildToNode, deleteNode, resetAllPositions, findNodeById
 /**
  * Tipos de acciones para el reducer del editor
  */
+
+
+
 export const ACTIONS = {
   UPDATE_NODE_TEXT: 'UPDATE_NODE_TEXT',
   UPDATE_NODE_POSITION: 'UPDATE_NODE_POSITION',

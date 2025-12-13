@@ -2,6 +2,25 @@ import React from 'react';
 import { Handle, Position } from 'reactflow';
 import './Node.css';
 
+// Funciones helper para colores por defecto
+function getDefaultBackgroundColor(tipo) {
+  switch(tipo) {
+    case 'pregunta': return '#1e3a8a';
+    case 'respuesta': return '#065f46';
+    case 'root': return '#581c87';
+    default: return '#0f1419';
+  }
+}
+
+function getDefaultBorderColor(tipo) {
+  switch(tipo) {
+    case 'pregunta': return '#3b82f6';
+    case 'respuesta': return '#10b981';
+    case 'root': return '#8b5cf6';
+    default: return '#8b5cf6';
+  }
+}
+
 const ReactFlowNode = ({ data }) => {
   const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, selected } = data;
 
@@ -30,14 +49,14 @@ const ReactFlowNode = ({ data }) => {
     width: `${node.width || 200}px`,
     height: `${node.height || 80}px`,
     fontSize: `${node.fontSize || 16}px`,
-    backgroundColor: node.backgroundColor || '#0f1419',
-    borderColor: node.borderColor || '#8b5cf6',
+    backgroundColor: node.backgroundColor || getDefaultBackgroundColor(node.tipo),
+    borderColor: node.borderColor || getDefaultBorderColor(node.tipo),
     borderWidth: `${node.borderWidth || 2}px`,
   };
 
   return (
     <div
-      className={`mindmap-node ${selected ? 'selected' : ''}`}
+      className={`mindmap-node ${selected ? 'selected' : ''} node-tipo-${node.tipo}`}
       style={nodeStyle}
       onDoubleClick={(e) => onNodeDoubleClick(e, node)}
       onClick={(e) => onNodeClick(e, node)}
