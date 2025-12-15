@@ -1,74 +1,140 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import PromptBuilder from './PromptBuilder.js';
 
 class GeminiService {
   constructor() {
     if (!process.env.GEMINI_API_KEY) {
-      console.error('❌ GEMINI_API_KEY not found in environment');
+      console.error('GEMINI_API_KEY not found in environment');
       throw new Error('Gemini API key is required');
     }
-    
-    console.log('✓ Initializing Gemini service with gemini-2.5-flash');
+
+    console.log('Initializing Gemini service with gemini-2.5-flash');
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     this.model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-    console.log('✓ Gemini instance created');
+    console.log('Gemini instance created');
   }
 
-  /**
-   * Generate child nodes based on parent node content and type
-   * @param {string} nodeText - Content of the parent node
-   * @param {string} nodeTipo - Type of parent node ('pregunta', 'respuesta', 'root')
-   * @param {number} count - Number of nodes to generate (default: 3)
-   * @returns {Promise<{nodes: Array<{text: string}>}>}
-   */
-  async generateNodes(nodeText, nodeTipo, count = 3) {
+  async generateNodes(nodeText, nodeTipo, count = 3, useStructured = true, description = '') {
     try {
-      console.log(`🤖 Generating ${count} nodes for "${nodeText}" (type: ${nodeTipo})`);
-      
-      const prompt = this._buildPrompt(nodeText, nodeTipo, count);
-      console.log('📝 Prompt built, invoking Gemini...');
+      console.log(`Generating ${count} nodes for "${nodeText}" (type: ${nodeTipo})`);
 
-      const result = await this.model.generateContent(prompt);
-      const response = await result.response;
-      
-      if (!response) {
-        throw new Error('No response from Gemini');
-      }
-      
-      const text = response.text();
-      console.log('✓ Gemini response received, text length:', text.length);
-
-      const nodes = this._parseResponse(text);
-      console.log(`✓ Parsed ${nodes.length} nodes from response`);
-
-      // Ensure we return exactly 'count' nodes (pad or trim as needed)
-      const finalNodes = nodes.slice(0, count);
-      while (finalNodes.length < count) {
-        finalNodes.push({ text: `Concepto ${finalNodes.length + 1}` });
-      }
-
-      console.log(`✓ Returning ${finalNodes.length} final nodes`);
-      return { nodes: finalNodes };
+      // Siempre usar generación estructurada con PromptBuilder para obtener descripciones
+      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, description);
     } catch (error) {
-      console.error('❌ Gemini generation error:', error.message);
+      console.error('Gemini generation error:', error.message);
       console.error('Error details:', error);
-      
-      // Return fallback nodes instead of throwing
-      console.warn('⚠️  Using fallback nodes');
+
+      console.warn('Using fallback nodes');
       const fallbackNodes = [];
       for (let i = 1; i <= count; i++) {
-        fallbackNodes.push({ text: `Concepto ${i}` });
+        fallbackNodes.push({
+          text: `Concepto ${i}`,
+          description: 'Descripción no disponible',
+          source: 'Fallback'
+        });
       }
       return { nodes: fallbackNodes };
     }
   }
 
-  /**
-   * Build prompt based on node type
-   * @private
-   */
+  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '') {
+    try {
+      console.log('Using PromptBuilder for node generation');
+
+      const nodeContext = {
+        _styles: [
+          { name: 'Number of items', value: count },
+          { name: 'Description', value: description || 'are relevant and provide meaningful context' }
+        ]
+      };
+
+      let question = nodeText;
+
+      const result = await this.generateStructuredNodes(nodeContext, question, 'basic', {});
+
+      const nodes = this._extractNodesFromStructuredResponse(result, count);
+
+      return { nodes };
+    } catch (error) {
+      console.error('PromptBuilder generation error:', error);
+      throw error;
+    }
+  }
+
+
+  async aggregateNodes(question, nodes, clusterCount = 3) {
+    try {
+      console.log(`Aggregating ${nodes.length} nodes into ${clusterCount} clusters`);
+
+      const formattedNodes = nodes.map(node => ({
+        _info: {
+          title: node.text || node.title || '',
+          note: node.description || ''
+        }
+      }));
+
+      const result = await this.generateStructuredNodes(
+        null,
+        question,
+        'aggregation',
+        { nodes: formattedNodes, clusterCount }
+      );
+
+      return result;
+    } catch (error) {
+      console.error('Aggregation error:', error);
+      throw error;
+    }
+  }
+
+  _extractNodesFromStructuredResponse(result, count) {
+    const nodes = [];
+
+    if (result.parseError) {
+      console.warn('Failed to parse structured response, using fallback');
+      console.warn('Parse error:', result.parseError);
+      console.warn('Raw response:', result.raw?.substring(0, 200));
+      for (let i = 0; i < count; i++) {
+        nodes.push({
+          text: `Concepto ${i + 1}`,
+          description: 'Error al generar descripción',
+          source: 'Fallback'
+        });
+      }
+      return nodes;
+    }
+
+    // El PromptBuilder siempre usa "items" ahora
+    if (result.items && Array.isArray(result.items)) {
+      result.items.forEach(item => {
+        const text = item.GPT_item_name || item.item_name || '';
+        const description = item.description || '';
+        const excerpt = item.excerpt || '';
+        if (text) {
+          const node = {
+            text,
+            description,
+            source: excerpt ? 'PDF Extract' : 'Gemini 2.5 Flash'
+          };
+          if (excerpt) node.excerpt = excerpt;
+          nodes.push(node);
+        }
+      });
+    }
+
+    while (nodes.length < count) {
+      nodes.push({
+        text: `Concepto ${nodes.length + 1}`,
+        description: 'Descripción no disponible',
+        source: 'Fallback'
+      });
+    }
+
+    return nodes.slice(0, count);
+  }
+
   _buildPrompt(nodeText, nodeTipo, count) {
     if (nodeTipo === 'pregunta' || nodeTipo === 'root') {
-      // Generate ANSWERS for questions
       return `Eres un asistente de mind mapping que ayuda a explorar temas a través de pensamiento estructurado. Genera respuestas concisas y específicas.
 
 Genera ${count} respuestas concisas y distintas a la siguiente pregunta:
@@ -84,7 +150,6 @@ Requisitos:
 
 Formato: Una respuesta por línea`;
     } else if (nodeTipo === 'respuesta') {
-      // Generate QUESTIONS for answers
       return `Eres un asistente de mind mapping que ayuda a profundizar la exploración mediante preguntas. Genera preguntas provocadoras de seguimiento.
 
 Basándote en la siguiente afirmación o respuesta:
@@ -106,27 +171,133 @@ Formato: Una pregunta por línea`;
     }
   }
 
-  /**
-   * Parse LLM response into array of node objects
-   * @private
-   */
   _parseResponse(aiResponse) {
     if (!aiResponse || typeof aiResponse !== 'string') {
       return [];
     }
 
-    // Split by newlines and clean up
     const lines = aiResponse
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0)
       .map(line => {
-        // Remove common prefixes (1., -, *, •, etc.)
         return line.replace(/^[\d\-\*\•\.]+\s*/, '').trim();
       })
       .filter(line => line.length > 0);
 
     return lines.map(text => ({ text }));
+  }
+
+  async generateStructuredNodes(nodeContext, question, type = 'basic', options = {}) {
+    try {
+      console.log(`Generating structured nodes (type: ${type})`);
+
+      let prompt;
+
+      switch(type) {
+        case 'basic':
+          prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
+          break;
+        case 'pdf':
+          console.warn('PDF-based prompts require PDF upload functionality');
+          prompt = PromptBuilder.getPromptForPDFAnswers(nodeContext, question);
+          break;
+        case 'aggregation':
+          prompt = PromptBuilder.getPromptForSummarizationAnswers(
+            question,
+            options.nodes || [],
+            options.clusterCount || 3
+          );
+          break;
+        case 'summarization-questions':
+          prompt = PromptBuilder.getPromptForSummarizationQuestions(
+            question,
+            options.nodes || [],
+            options.clusterCount || 3
+          );
+          break;
+        case 'suggested-model':
+          prompt = PromptBuilder.getPromptForModelSuggestedQuestion(
+            nodeContext,
+            options.answerLabel,
+            options.answerNote,
+            options.previousQuestion,
+            options.firstQuestion,
+            options.model
+          );
+          break;
+        case 'suggested-logs':
+          prompt = PromptBuilder.getPromptForLogsSuggestedQuestions(
+            nodeContext,
+            options.answerLabel,
+            options.answerNote,
+            options.previousQuestion,
+            options.firstQuestion,
+            options.logs
+          );
+          break;
+        case 'suggested-llm':
+          prompt = PromptBuilder.getPromptForLLMSuggestedQuestions(
+            nodeContext,
+            options.answerLabel,
+            options.answerNote,
+            options.previousQuestion,
+            options.firstQuestion
+          );
+          break;
+        default:
+          throw new Error(`Unknown type: ${type}`);
+      }
+
+      console.log('Advanced prompt built, invoking Gemini...');
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+
+      if (!response) {
+        throw new Error('No response from Gemini');
+      }
+
+      const text = response.text();
+      console.log('Gemini response received');
+
+      const parsedResponse = this._parseStructuredResponse(text);
+      console.log('Parsed structured response');
+
+      return parsedResponse;
+    } catch (error) {
+      console.error('Gemini structured generation error:', error.message);
+      console.error('Error details:', error);
+      throw error;
+    }
+  }
+
+  _parseStructuredResponse(aiResponse) {
+    if (!aiResponse || typeof aiResponse !== 'string') {
+      return { error: 'Invalid response' };
+    }
+
+    try {
+      let jsonText = aiResponse;
+
+      const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[1];
+      } else {
+        const codeMatch = aiResponse.match(/```\s*([\s\S]*?)\s*```/);
+        if (codeMatch) {
+          jsonText = codeMatch[1];
+        }
+      }
+
+      const parsed = JSON.parse(jsonText.trim());
+      return parsed;
+    } catch (error) {
+      console.error('Failed to parse JSON response:', error.message);
+      return {
+        raw: aiResponse,
+        parseError: error.message
+      };
+    }
   }
 }
 
@@ -144,8 +315,16 @@ class GeminiServiceProxy {
     return this.serviceInstance;
   }
 
-  generateNodes(nodeText, nodeTipo, count) {
-    return this.getInstance().generateNodes(nodeText, nodeTipo, count);
+  generateNodes(nodeText, nodeTipo, count, useStructured, description) {
+    return this.getInstance().generateNodes(nodeText, nodeTipo, count, useStructured, description);
+  }
+
+  generateStructuredNodes(nodeContext, question, type, options) {
+    return this.getInstance().generateStructuredNodes(nodeContext, question, type, options);
+  }
+
+  aggregateNodes(question, nodes, clusterCount) {
+    return this.getInstance().aggregateNodes(question, nodes, clusterCount);
   }
 }
 

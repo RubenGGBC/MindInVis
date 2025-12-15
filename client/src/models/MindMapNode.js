@@ -1,9 +1,11 @@
 class MindMapNode {
-  constructor(id, text, x, y, tipo) {
+  constructor(id, text, x, y, tipo, description = '', source = '') {
     // Identificación y contenido
     this.id = id;
     this.text = text;
     this.tipo = tipo;
+    this.description = description;
+    this.source = source;
 
     // Posición
     this.x = x;
@@ -46,13 +48,15 @@ class MindMapNode {
    * Crea un nodo hijo con posición relativa
    * NOTA: No mantiene referencia parent para evitar referencias circulares
    */
-  createChild(text, offsetX, offsetY, tipo) {
+  createChild(text, offsetX, offsetY, tipo, description = '', source = '') {
     const childNode = new MindMapNode(
       `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       text,
       this.x + offsetX,
       this.y + offsetY,
-      tipo
+      tipo,
+      description,
+      source
     );
     return childNode;
   }
@@ -74,6 +78,8 @@ class MindMapNode {
       id: this.id,
       text: this.text,
       tipo: this.tipo,
+      description: this.description,
+      source: this.source,
       x: this.x,
       y: this.y,
       initialX: this.initialX,
@@ -119,7 +125,9 @@ class MindMapNode {
       data.text,
       data.x,
       data.y,
-      data.tipo || 'pregunta'
+      data.tipo || 'pregunta',
+      data.description || '',
+      data.source || ''
     );
 
     // Restaurar posiciones iniciales
@@ -166,7 +174,9 @@ class MindMapNode {
       this.text,
       this.x,
       this.y,
-      this.tipo
+      this.tipo,
+      this.description,
+      this.source
     );
 
     cloned.initialX = this.initialX;

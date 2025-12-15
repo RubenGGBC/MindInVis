@@ -241,63 +241,24 @@ export function traverseTree(tree, fn, depth = 0, path = []) {
 }
 
 /**
- * Calcula posiciones de nodos hijos sin colisiones
+ * Calcula posiciones iniciales para nodos hijos (antes de aplicar el layout dinámico)
+ * Las posiciones finales serán recalculadas por applyDynamicLayout
  * @param {Object} parentNode - Nodo padre
  * @param {number} childrenCount - Número de nodos hijos a crear
- * @param {Object} tree - Árbol completo para verificar colisiones
+ * @param {Object} tree - Árbol completo (no usado, mantenido por compatibilidad)
  * @returns {Array} - Array de posiciones {x, y}
  */
 export function calculateChildrenPositions(parentNode, childrenCount, tree) {
-  const horizontalOffset = 300;
-  const minVerticalSpacing = 150;
-  
-  // Obtener todos los nodos existentes para detectar colisiones
-  const allNodes = [];
-  traverseTree(tree, (node) => {
-    allNodes.push(node);
-  });
-  
-  // Calcular altura aproximada de cada nodo
-  const nodeHeight = 100;
-  
-  // Calcular espaciado requerido
-  const totalHeight = (childrenCount - 1) * minVerticalSpacing;
-  const startY = -totalHeight / 2;
-  
+  // Posiciones temporales - el layout dinámico las recalculará
   const positions = [];
-  
+
   for (let i = 0; i < childrenCount; i++) {
-    let proposedY = parentNode.y + startY + (i * minVerticalSpacing);
-    let proposedX = parentNode.x + horizontalOffset;
-    
-    // Verificar colisiones con otros nodos y ajustar
-    let hasCollision = true;
-    let adjustedY = proposedY;
-    let attempts = 0;
-    
-    while (hasCollision && attempts < 10) {
-      hasCollision = allNodes.some(node => {
-        if (node.x === parentNode.x && node.y === parentNode.y) return false; // Ignorar el padre
-        
-        const xDist = Math.abs(proposedX - node.x);
-        const yDist = Math.abs(adjustedY - node.y);
-        
-        // Espacio mínimo requerido entre nodos
-        const minXDist = 350;
-        const minYDist = 150;
-        
-        return xDist < minXDist && yDist < minYDist;
-      });
-      
-      if (hasCollision) {
-        adjustedY += minVerticalSpacing;
-        attempts++;
-      }
-    }
-    
-    positions.push({ x: proposedX, y: adjustedY });
+    positions.push({
+      x: parentNode.x + LAYOUT_CONFIG.horizontalSpacing,
+      y: parentNode.y  // El layout dinámico calculará la Y correcta
+    });
   }
-  
+
   return positions;
 }
 
@@ -343,4 +304,114 @@ export function findParentNode(tree, nodeId) {
   }
 
   return null;
+}
+
+// ============================================
+// LAYOUT DINÁMICO - Sistema tipo MindMeister
+// ============================================
+
+const LAYOUT_CONFIG = {
+  horizontalSpacing: 300,    // Espacio horizontal entre columnas
+  minVerticalSpacing: 30,    // Espacio mínimo entre nodos hermanos
+  nodeHeight: 80,            // Altura base de un nodo
+};
+
+/**
+ * Calcula la altura total que ocupa un subárbol (incluyendo todos sus descendientes visibles)
+ * @param {Object} node - Nodo raíz del subárbol
+ * @returns {number} - Altura total del subárbol en píxeles
+ */
+export function getSubtreeHeight(node) {
+  if (!node) return 0;
+
+  // Si el nodo está colapsado o no tiene hijos visibles, solo cuenta su propia altura
+  if (node.collapsed || !node.children || node.children.length === 0) {
+    return node.height || LAYOUT_CONFIG.nodeHeight;
+  }
+
+  // Calcular la altura total de todos los hijos
+  let totalChildrenHeight = 0;
+  for (let i = 0; i < node.children.length; i++) {
+    totalChildrenHeight += getSubtreeHeight(node.children[i]);
+    // Añadir espacio entre hermanos (excepto después del último)
+    if (i < node.children.length - 1) {
+      totalChildrenHeight += LAYOUT_CONFIG.minVerticalSpacing;
+    }
+  }
+
+  // El subárbol ocupa al menos la altura del nodo padre o la de sus hijos
+  const nodeHeight = node.height || LAYOUT_CONFIG.nodeHeight;
+  return Math.max(nodeHeight, totalChildrenHeight);
+}
+
+/**
+ * Aplica el layout dinámico a todo el árbol, reposicionando todos los nodos
+ * @param {Object} tree - Nodo raíz del árbol
+ * @returns {Object} - Nuevo árbol con posiciones actualizadas
+ */
+export function applyDynamicLayout(tree) {
+  if (!tree) return null;
+
+  // Clonar el árbol para no mutarlo
+  const newTree = cloneTree(tree);
+
+  // Aplicar layout recursivamente empezando desde la raíz
+  layoutNode(newTree, newTree.x, newTree.y);
+
+  return newTree;
+}
+
+/**
+ * Aplica el layout a un nodo y todos sus descendientes
+ * @param {Object} node - Nodo a posicionar
+ * @param {number} x - Posición X del nodo
+ * @param {number} centerY - Centro Y donde posicionar el subárbol
+ */
+function layoutNode(node, x, centerY) {
+  // Posicionar este nodo
+  node.x = x;
+  node.y = centerY;
+  node.initialX = x;
+  node.initialY = centerY;
+
+  // Si está colapsado o no tiene hijos, terminamos
+  if (node.collapsed || !node.children || node.children.length === 0) {
+    return;
+  }
+
+  // Calcular la altura total de los hijos
+  const childrenHeights = node.children.map(child => getSubtreeHeight(child));
+  const totalHeight = childrenHeights.reduce((sum, h, i) => {
+    return sum + h + (i > 0 ? LAYOUT_CONFIG.minVerticalSpacing : 0);
+  }, 0);
+
+  // Posicionar hijos centrados verticalmente respecto al padre
+  const childX = x + LAYOUT_CONFIG.horizontalSpacing;
+  let currentY = centerY - totalHeight / 2;
+
+  for (let i = 0; i < node.children.length; i++) {
+    const child = node.children[i];
+    const childHeight = childrenHeights[i];
+
+    // El centro del hijo es el punto medio de su espacio asignado
+    const childCenterY = currentY + childHeight / 2;
+
+    // Aplicar layout recursivamente al hijo
+    layoutNode(child, childX, childCenterY);
+
+    // Mover el cursor al siguiente espacio
+    currentY += childHeight + LAYOUT_CONFIG.minVerticalSpacing;
+  }
+}
+
+/**
+ * Recalcula el layout solo para un subárbol específico y ajusta los ancestros
+ * @param {Object} tree - Árbol completo
+ * @param {string} nodeId - ID del nodo cuyo subárbol cambió
+ * @returns {Object} - Nuevo árbol con layout actualizado
+ */
+export function relayoutFromNode(tree, nodeId) {
+  // Por ahora, recalculamos todo el árbol para simplicidad
+  // Una optimización futura sería solo recalcular lo necesario
+  return applyDynamicLayout(tree);
 }

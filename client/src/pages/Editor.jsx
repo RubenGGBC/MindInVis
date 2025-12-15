@@ -293,14 +293,21 @@ const Editor = () => {
 
         const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);
 
-        const childrenNodes = responses.map((text, index) => {
+        const childrenNodes = responses.map((response, index) => {
           const position = positions[index];
+          // Extraer texto y descripción de la respuesta
+          const text = typeof response === 'string' ? response : (response.text || '');
+          const description = typeof response === 'object' ? (response.description || '') : '';
+          const source = typeof response === 'object' ? (response.source || 'Generado por IA') : 'Generado por IA';
+
           const childNode = new MindMapNode(
             `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
             text,
             position.x,
             position.y,
-            getChildTipo(editingNode.tipo)
+            getChildTipo(editingNode.tipo),
+            description,
+            source
           );
           return childNode;
         });
@@ -546,6 +553,7 @@ const Editor = () => {
           </span>
         </button>
       )}
+
     </div>
   );
 };

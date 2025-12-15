@@ -1,4 +1,4 @@
-import { updateNode, addChildToNode, deleteNode, resetAllPositions, findNodeById } from '../utils/nodeUtils';
+import { updateNode, addChildToNode, deleteNode, resetAllPositions, findNodeById, applyDynamicLayout } from '../utils/nodeUtils';
 
 /**
  * Tipos de acciones para el reducer del editor
@@ -81,7 +81,10 @@ export function editorReducer(state, action) {
 
     case ACTIONS.ADD_CHILD: {
       const { parentId, childNode } = action.payload;
-      const newTree = addChildToNode(state.tree, parentId, childNode);
+      let newTree = addChildToNode(state.tree, parentId, childNode);
+
+      // Recalcular layout dinámico
+      newTree = applyDynamicLayout(newTree);
 
       return addToHistory(state, newTree);
     }
@@ -100,17 +103,23 @@ export function editorReducer(state, action) {
         lastModified: Date.now()
       }));
 
+      // Recalcular layout dinámico
+      newTree = applyDynamicLayout(newTree);
+
       return addToHistory(state, newTree);
     }
 
     case ACTIONS.DELETE_NODE: {
       const { nodeId } = action.payload;
-      const newTree = deleteNode(state.tree, nodeId);
+      let newTree = deleteNode(state.tree, nodeId);
 
       // Si se intentó eliminar la raíz, no hacer nada
       if (newTree === null) {
         return state;
       }
+
+      // Recalcular layout dinámico
+      newTree = applyDynamicLayout(newTree);
 
       return addToHistory(state, newTree);
     }
@@ -135,10 +144,13 @@ export function editorReducer(state, action) {
 
     case ACTIONS.TOGGLE_COLLAPSE: {
       const { nodeId } = action.payload;
-      const newTree = updateNode(state.tree, nodeId, (node) => ({
+      let newTree = updateNode(state.tree, nodeId, (node) => ({
         collapsed: !node.collapsed,
         lastModified: Date.now()
       }));
+
+      // Recalcular layout dinámico al colapsar/expandir
+      newTree = applyDynamicLayout(newTree);
 
       return {
         ...state,
@@ -147,7 +159,8 @@ export function editorReducer(state, action) {
     }
 
     case ACTIONS.RESET_POSITIONS: {
-      const newTree = resetAllPositions(state.tree);
+      // Usar layout dinámico para reorganizar
+      const newTree = applyDynamicLayout(state.tree);
       return addToHistory(state, newTree);
     }
 

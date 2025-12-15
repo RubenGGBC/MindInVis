@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
 import './Node.css';
-import NodeDetailsPopup from './NodeDetailsPopup'; // Importar el popup
+import NodeDetailsPopup from './NodeDetailsPopup';
 
 // Funciones helper para colores por defecto
 function getDefaultBackgroundColor(tipo) {
@@ -24,7 +24,7 @@ function getDefaultBorderColor(tipo) {
 
 const ReactFlowNode = ({ data }) => {
   const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, selected } = data;
-  const [showPopup, setShowPopup] = useState(false); // Estado para el popup
+  const [showPopup, setShowPopup] = useState(false);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -62,73 +62,74 @@ const ReactFlowNode = ({ data }) => {
   };
 
   return (
-    <>
-      <div
-        className={`mindmap-node ${selected ? 'selected' : ''} node-tipo-${node.tipo}`}
-        style={nodeStyle}
-        onDoubleClick={(e) => onNodeDoubleClick(e, node)}
-        onClick={(e) => onNodeClick(e, node)}
-      >
-        <Handle type="target" position={Position.Left} />
-        {isEditing ? (
-          <div className="node-edit-mode">
-            <input
-              type="text"
-              value={node.text}
-              onChange={(e) => onTextChange(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Escribe tu pregunta..."
-              className="node-input"
-              autoFocus
-              disabled={isLoading}
-            />
-            {isLoading && (
-              <div className="node-loading">
-                <div className="spinner"></div>
-                <span>Generando con IA...</span>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="node-view-mode">
-            <div className="node-content">
-              {node.text}
+    <div
+      className={`mindmap-node ${selected ? 'selected' : ''} node-tipo-${node.tipo}`}
+      style={nodeStyle}
+      onDoubleClick={(e) => onNodeDoubleClick(e, node)}
+      onClick={(e) => onNodeClick(e, node)}
+    >
+      <Handle type="target" position={Position.Left} />
+      {isEditing ? (
+        <div className="node-edit-mode">
+          <input
+            type="text"
+            value={node.text}
+            onChange={(e) => onTextChange(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe tu pregunta..."
+            className="node-input"
+            autoFocus
+            disabled={isLoading}
+          />
+          {isLoading && (
+            <div className="node-loading">
+              <div className="spinner"></div>
+              <span>Generando con IA...</span>
             </div>
+          )}
+        </div>
+      ) : (
+        <div className="node-view-mode">
+          <div className="node-content">
+            {node.text}
           </div>
-        )}
-        {!isEditing && onToggleCollapse && node.children && node.children.length > 0 && (
-          <button
-            className="node-collapse-button"
-            onClick={handleToggleCollapse}
-            title={node.collapsed ? "Expandir hijos" : "Colapsar hijos"}
-          >
-            {node.collapsed ? '▶' : '▼'}
-          </button>
-        )}
-        {!isEditing && node.tipo === 'respuesta' && (
-          <button
-            className="node-details-button"
-            onClick={handleTogglePopup}
-            title="Ver detalles"
-          >
-            i
-          </button>
-        )}
-        {!isEditing && onAddChild && (
-          <button
-            className="node-add-button"
-            onClick={handleAddClick}
-            title="Agregar nodo hijo"
-          >
-            +
-          </button>
-        )}
-        <Handle type="source" position={Position.Right} />
-      </div>
-      {showPopup && (
-        <NodeDetailsPopup node={node} onClose={() => setShowPopup(false)} />
+        </div>
       )}
-    </>
+      {!isEditing && onToggleCollapse && node.children && node.children.length > 0 && (
+        <button
+          className="node-collapse-button"
+          onClick={handleToggleCollapse}
+          title={node.collapsed ? "Expandir hijos" : "Colapsar hijos"}
+        >
+          {node.collapsed ? '▶' : '▼'}
+        </button>
+      )}
+      {!isEditing && onAddChild && (
+        <button
+          className="node-add-button"
+          onClick={handleAddClick}
+          title="Agregar nodo hijo"
+        >
+          +
+        </button>
+      )}
+      {!isEditing && (node.description || node.source) && (
+        <button
+          className="node-details-button"
+          onClick={handleTogglePopup}
+          title="Ver detalles de IA"
+        >
+          i
+        </button>
+      )}
+      {showPopup && (node.description || node.source) && (
+        <NodeDetailsPopup
+          node={node}
+          onClose={() => setShowPopup(false)}
+        />
+      )}
+      <Handle type="source" position={Position.Right} />
+    </div>
   );
 };
 
