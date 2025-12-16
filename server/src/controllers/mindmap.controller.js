@@ -6,7 +6,7 @@ export const generateNodes = async (req, res, next) => {
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.warn('⚠️  Validation errors:', errors.array());
+      console.warn('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -15,13 +15,13 @@ export const generateNodes = async (req, res, next) => {
 
     const { nodeText, nodeTipo, count = 3 } = req.body;
 
-    console.log(`\n📡 POST /api/mindmap/generate-nodes`);
+    console.log(`\nPOST /api/mindmap/generate-nodes`);
     console.log(`   Input: nodeText="${nodeText}", nodeTipo="${nodeTipo}", count=${count}`);
 
     // Call OpenAI service
     const result = await openaiService.generateNodes(nodeText, nodeTipo, count);
 
-    console.log(`✓ Successfully generated ${result.nodes.length} nodes`);
+    console.log(`Successfully generated ${result.nodes.length} nodes`);
 
     // Success response
     res.json({
@@ -112,7 +112,7 @@ export const aggregateNodes = async (req, res, next) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.warn('⚠️  Validation errors:', errors.array());
+      console.warn('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -121,13 +121,13 @@ export const aggregateNodes = async (req, res, next) => {
 
     const { question, nodes, clusterCount = 3 } = req.body;
 
-    console.log(`\n📡 POST /api/mindmap/aggregate-nodes`);
+    console.log(`\nPOST /api/mindmap/aggregate-nodes`);
     console.log(`   Question: "${question}"`);
     console.log(`   Nodes to cluster: ${nodes.length}, Clusters: ${clusterCount}`);
 
     const result = await openaiService.aggregateNodes(question, nodes, clusterCount);
 
-    console.log(`✓ Successfully aggregated nodes into clusters`);
+    console.log(`Successfully aggregated nodes into clusters`);
 
     res.json({
       success: true,

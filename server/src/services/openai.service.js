@@ -34,8 +34,8 @@ class OpenAIService {
 
   async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '') {
     try {
-      console.log('🔧 Using PromptBuilder for node generation');
-      console.log('📝 Input:', { nodeText, nodeTipo, count, description });
+      console.log('Using PromptBuilder for node generation');
+      console.log('Input:', { nodeText, nodeTipo, count, description });
 
       const nodeContext = {
         _styles: [
@@ -46,17 +46,17 @@ class OpenAIService {
 
       let question = nodeText;
 
-      console.log('🚀 Calling generateStructuredNodes...');
+      console.log('Calling generateStructuredNodes...');
       const result = await this.generateStructuredNodes(nodeContext, question, 'basic', {});
-      console.log('✅ Result from generateStructuredNodes:', JSON.stringify(result).substring(0, 300));
+      console.log('Result from generateStructuredNodes:', JSON.stringify(result).substring(0, 300));
 
       const nodes = this._extractNodesFromStructuredResponse(result, count);
-      console.log('📦 Extracted nodes:', nodes.length, 'nodes');
+      console.log('Extracted nodes:', nodes.length, 'nodes');
       console.log('First node:', JSON.stringify(nodes[0]));
 
       return { nodes };
     } catch (error) {
-      console.error('❌ PromptBuilder generation error:', error);
+      console.error('PromptBuilder generation error:', error);
       console.error('Stack:', error.stack);
       throw error;
     }
@@ -107,10 +107,41 @@ class OpenAIService {
 
     // El PromptBuilder siempre usa "items" ahora
     if (result.items && Array.isArray(result.items)) {
-      result.items.forEach(item => {
-        const text = item.GPT_item_name || item.item_name || '';
-        const description = item.description || '';
+      result.items.forEach((item, index) => {
+        let text = item.GPT_item_name || item.item_name || '';
+        let description = item.description || '';
         const excerpt = item.excerpt || '';
+
+        console.log(`Item ${index}:`, JSON.stringify(item).substring(0, 150));
+
+        // Si no hay GPT_item_name, buscar en las otras claves del objeto
+        // OpenAI devuelve: {"item":"Developmental Stage", "description":"..."}
+        // O: {"Global Temperature Rise":"...", "description":"..."}
+        if (!text) {
+          // Prioridad 1: buscar por claves conocidas genéricas
+          if (item.item && typeof item.item === 'string') {
+            text = item.item;
+            console.log(`  Found as item.item: "${text}"`);
+          } else if (item.name && typeof item.name === 'string') {
+            text = item.name;
+            console.log(`  Found as item.name: "${text}"`);
+          } else {
+            // Prioridad 2: tomar la primera propiedad que no sea 'description' o 'excerpt'
+            for (const [key, value] of Object.entries(item)) {
+              if (key !== 'description' && key !== 'excerpt' && typeof value === 'string') {
+                // Esta es la clave del item (ej: "Global Temperature Rise")
+                text = key;
+                // Si el valor de esta key es la descripción, guardarla
+                description = value;
+                console.log(`  Found as key: "${text}" with description in value`);
+                break;
+              }
+            }
+          }
+        }
+
+        console.log(`  Text: "${text}", Description: "${description.substring(0, 50)}..."`);
+
         if (text) {
           const node = {
             text,
@@ -252,8 +283,10 @@ Formato: Una pregunta por línea`)
           throw new Error(`Unknown type: ${type}`);
       }
 
-      console.log('🔨 Advanced prompt built, invoking OpenAI...');
-      console.log('📄 Prompt preview:', prompt.substring(0, 200) + '...');
+      console.log('Advanced prompt built, invoking OpenAI...');
+      console.log('Full prompt being sent to OpenAI:');
+      console.log(prompt);
+      console.log('---END OF PROMPT---');
 
       const messages = [
         new SystemMessage('You are an expert mind mapping assistant. Provide responses in valid JSON format.'),
@@ -261,11 +294,11 @@ Formato: Una pregunta por línea`)
       ];
 
       const response = await this.llm.invoke(messages);
-      console.log('✅ OpenAI response received, length:', response.content?.length);
-      console.log('📝 Response preview:', response.content?.substring(0, 300));
+      console.log('OpenAI response received, length:', response.content?.length);
+      console.log('Response preview:', response.content?.substring(0, 300));
 
       const parsedResponse = this._parseStructuredResponse(response.content);
-      console.log('🔍 Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
+      console.log('Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
 
       return parsedResponse;
     } catch (error) {

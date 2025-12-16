@@ -9,7 +9,7 @@
   --purple-light: #8b5fc8;
   --background: #f0f2f5; /* Changed from dark to light */
   --surface: #ffffff; /* Changed from dark to white */
-  --text-primary: #1a1f2e; /* Changed from white to dark */
+  --text-primary: #000000; /* Changed from white to dark */
   --text-secondary: #5e6c84; /* Changed from light grey to darker grey */
   --border: #cccccc; /* Changed from dark grey to lighter grey */
 }

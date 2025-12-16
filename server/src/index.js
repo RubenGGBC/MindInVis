@@ -8,9 +8,9 @@ import morgan from 'morgan';
 dotenv.config();
 
 // Validate required environment variables
-if (!process.env.GEMINI_API_KEY) {
-  console.error('❌ ERROR: GEMINI_API_KEY is not set in environment variables');
-  console.error('Please create a .env file in the server directory with your Gemini API key');
+if (!process.env.OPENAI_API_KEY) {
+  console.error('ERROR: OPENAI_API_KEY is not set in environment variables');
+  console.error('Please create a .env file in the server directory with your OpenAI API key');
   process.exit(1);
 }
 
@@ -38,7 +38,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    gemini: !!process.env.GEMINI_API_KEY
+    openai: !!process.env.OPENAI_API_KEY
   });
 });
 
@@ -58,10 +58,10 @@ app.use(errorHandler);
 
 // Start server
 const server = app.listen(PORT, () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`📡 CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
-  console.log(`🤖 Gemini API configured: ${process.env.GEMINI_API_KEY ? '✓' : '✗'}`);
-  console.log(`🌐 Health check: http://localhost:${PORT}/health\n`);
+  console.log(`\nServer running on port ${PORT}`);
+  console.log(`CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
+  console.log(`OpenAI API configured: ${process.env.OPENAI_API_KEY ? 'configured' : 'not configured'}`);
+  console.log(`Health check: http://localhost:${PORT}/health\n`);
 });
 
 // Graceful shutdown
