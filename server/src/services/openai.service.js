@@ -9,22 +9,30 @@ class OpenAIService {
       throw new Error('OpenAI API key is required');
     }
 
-    console.log('Initializing OpenAI service with gpt-3.5-turbo');
+    console.log('Initializing OpenAI service with gpt-4o');
     this.llm = new ChatOpenAI({
-      modelName: 'gpt-3.5-turbo',
+      modelName: 'gpt-4o',
       temperature: 0.7,
       maxTokens: 500,
-      openAIApiKey: process.env.OPENAI_API_KEY
+      openAIApiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000 // 30 second timeout
     });
-    console.log('ChatOpenAI instance created');
+    console.log('ChatOpenAI instance created with 30s timeout');
   }
 
-  async generateNodes(nodeText, nodeTipo, count = 3, useStructured = true, description = '') {
+  async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null) {
     try {
       console.log(`Generating ${count} nodes for "${nodeText}" (type: ${nodeTipo})`);
+      
+      if (nodeContextData) {
+        console.log('With node context:', {
+          level: nodeContextData.pathLength,
+          firstQuestion: nodeContextData.firstQuestion
+        });
+      }
 
       // Siempre usar generación estructurada con PromptBuilder para obtener descripciones
-      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, description);
+      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData);
     } catch (error) {
       console.error('OpenAI generation error:', error.message);
       console.error('Full error:', error);
@@ -32,32 +40,89 @@ class OpenAIService {
     }
   }
 
-  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '') {
+  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '', nodeContextData = null) {
     try {
-      console.log('Using PromptBuilder for node generation');
-      console.log('Input:', { nodeText, nodeTipo, count, description });
+      console.log('\n' + '═'.repeat(80));
+      console.log('📌 GENERATE NODES WITH PROMPT BUILDER');
+      console.log('═'.repeat(80));
+      console.log(`Input Parameters:`);
+      console.log(`  • Text: "${nodeText}"`);
+      console.log(`  • Type: ${nodeTipo}`);
+      console.log(`  • Count: ${count}`);
+      console.log(`  • Description: "${description}"`);
 
       const nodeContext = {
-        _styles: [
-          { name: 'Number of items', value: count },
-          { name: 'Description', value: description || 'are relevant and provide meaningful context' }
-        ]
+        _styles: {
+          llmSuggestedItems: count
+        }
       };
 
       let question = nodeText;
+      let promptType = 'basic';
+      let options = {};
 
-      console.log('Calling generateStructuredNodes...');
-      const result = await this.generateStructuredNodes(nodeContext, question, 'basic', {});
-      console.log('Result from generateStructuredNodes:', JSON.stringify(result).substring(0, 300));
+      // Si hay contexto, significa que es una respuesta generada por una pregunta
+      // Las respuestas generadas por preguntas USAN CONTEXTO
+      if (nodeContextData && nodeTipo === 'respuesta' && nodeContextData.pathLength >= 2) {
+        promptType = 'suggested-llm';
+        options = {
+          answerLabel: nodeContextData.currentAnswer,
+          answerNote: nodeContextData.currentAnswerNote,
+          previousQuestion: nodeContextData.previousQuestion,
+          firstQuestion: nodeContextData.firstQuestion,
+          fullPath: nodeContextData.fullPath
+        };
+        
+        console.log(`\n✨ CONTEXT DETECTED - Using enhanced prompt`);
+        console.log(`Context Path Length: ${nodeContextData.pathLength}`);
+        console.log(`Full Ancestry: ${nodeContextData.fullPath?.join(' → ') || 'N/A'}`);
+        console.log(`  • Root (L1):     "${nodeContextData.firstQuestion}"`);
+        console.log(`  • Parent (L${nodeContextData.pathLength - 1}):     "${nodeContextData.previousQuestion}"`);
+        console.log(`  • Current (L${nodeContextData.pathLength}):   "${nodeContextData.currentAnswer}"`);
+        console.log(`  • Prompt Type:   ${promptType} ← SWITCHED FROM 'basic'`);
+      } else {
+        console.log(`\n⚠️  NO CONTEXT - Using basic prompt`);
+        if (nodeContextData) {
+          console.log(`  Reason: pathLength=${nodeContextData?.pathLength || 'N/A'}, type=${nodeTipo}`);
+        }
+      }
+
+      console.log('\nCalling generateStructuredNodes...');
+      let result;
+      try {
+        result = await this.generateStructuredNodes(nodeContext, question, promptType, options);
+      } catch (structuredError) {
+        console.error('❌ generateStructuredNodes failed:', structuredError.message);
+        throw structuredError;
+      }
+      
+      if (!result) {
+        console.error('❌ generateStructuredNodes returned null/undefined');
+        throw new Error('No result from generateStructuredNodes');
+      }
+
+      console.log('\n✅ Successfully processed result');
+      console.log('Result structure:', {
+        hasItems: !!result.items,
+        itemsLength: result.items?.length,
+        hasParseError: !!result.parseError
+      });
 
       const nodes = this._extractNodesFromStructuredResponse(result, count);
-      console.log('Extracted nodes:', nodes.length, 'nodes');
-      console.log('First node:', JSON.stringify(nodes[0]));
+      console.log(`✅ Extracted ${nodes.length} nodes`);
+      if (nodes.length > 0) {
+        console.log('First node sample:', {
+          text: nodes[0].text?.substring(0, 50),
+          source: nodes[0].source
+        });
+      }
+      console.log('═'.repeat(80) + '\n');
 
       return { nodes };
     } catch (error) {
-      console.error('PromptBuilder generation error:', error);
+      console.error('❌ PromptBuilder generation error:', error);
       console.error('Stack:', error.stack);
+      console.log('═'.repeat(80) + '\n');
       throw error;
     }
   }
@@ -224,19 +289,31 @@ Formato: Una pregunta por línea`)
 
   async generateStructuredNodes(nodeContext, question, type = 'basic', options = {}) {
     try {
-      console.log(`Generating structured nodes (type: ${type})`);
+      console.log(`\n${'═'.repeat(80)}`);
+      console.log(`GENERATING STRUCTURED NODES (type: ${type})`);
+      console.log(`${'═'.repeat(80)}`);
+      console.log(`Question/Topic: "${question}"`);
+      console.log(`Context levels: ${nodeContext?._styles?.llmSuggestedItems || 'default'}`);
 
       let prompt;
 
       switch(type) {
         case 'basic':
+          console.log('\n📋 BASIC PROMPT (no context)');
+          console.log('─'.repeat(80));
           prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
+          console.log('✓ Simple prompt - just the question');
           break;
         case 'pdf':
+          console.log('\n📄 PDF PROMPT');
+          console.log('─'.repeat(80));
           console.warn('PDF-based prompts require PDF upload functionality');
           prompt = PromptBuilder.getPromptForPDFAnswers(nodeContext, question);
           break;
         case 'aggregation':
+          console.log('\n🔗 AGGREGATION PROMPT');
+          console.log('─'.repeat(80));
+          console.log(`Clustering ${options.nodes?.length || 0} nodes into ${options.clusterCount || 3} groups`);
           prompt = PromptBuilder.getPromptForSummarizationAnswers(
             question,
             options.nodes || [],
@@ -244,6 +321,8 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'summarization-questions':
+          console.log('\n❓ SUMMARIZATION QUESTIONS PROMPT');
+          console.log('─'.repeat(80));
           prompt = PromptBuilder.getPromptForSummarizationQuestions(
             question,
             options.nodes || [],
@@ -251,6 +330,15 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-model':
+          console.log('\n🎯 SUGGESTED MODEL PROMPT (with full context)');
+          console.log('─'.repeat(80));
+          console.log('📍 CONTEXT INFORMATION:');
+          console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
+          console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
+          console.log(`  • Current Answer (Level 3):   "${options.answerLabel}"`);
+          console.log(`  • Answer Description:         "${options.answerNote?.substring(0, 60)}..."`);
+          console.log(`  • Model Used:                 ${options.model?.name || 'Unknown'}`);
+          
           prompt = PromptBuilder.getPromptForModelSuggestedQuestion(
             nodeContext,
             options.answerLabel,
@@ -261,6 +349,15 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-logs':
+          console.log('\n📚 SUGGESTED LOGS PROMPT (with history)');
+          console.log('─'.repeat(80));
+          console.log('📍 CONTEXT INFORMATION:');
+          console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
+          console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
+          console.log(`  • Current Answer (Level 3):   "${options.answerLabel}"`);
+          console.log(`  • Answer Description:         "${options.answerNote?.substring(0, 60)}..."`);
+          console.log(`  • Historical Logs Available:  ${options.logs?.length || 0} entries`);
+          
           prompt = PromptBuilder.getPromptForLogsSuggestedQuestions(
             nodeContext,
             options.answerLabel,
@@ -271,6 +368,15 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-llm':
+          console.log('\n🤖 SUGGESTED LLM PROMPT (with full context - KEY FEATURE)');
+          console.log('─'.repeat(80));
+          console.log('📍 CONTEXT INFORMATION:');
+          console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
+          console.log(`  • Parent Question (Level ${options.fullPath?.length - 1 || '?'}): "${options.previousQuestion}"`);
+          console.log(`  • Full Ancestry Path:         ${options.fullPath?.join(' → ') || 'N/A'}`);
+          console.log(`  • Current Answer (Level ${options.fullPath?.length || '?'}):   "${options.answerLabel}"`);
+          console.log(`  • Answer Description:         "${options.answerNote?.substring(0, 60)}..."`);
+          
           prompt = PromptBuilder.getPromptForLLMSuggestedQuestions(
             nodeContext,
             options.answerLabel,
@@ -283,27 +389,52 @@ Formato: Una pregunta por línea`)
           throw new Error(`Unknown type: ${type}`);
       }
 
-      console.log('Advanced prompt built, invoking OpenAI...');
-      console.log('Full prompt being sent to OpenAI:');
+      console.log('\n📄 FULL PROMPT BEING SENT TO LLM:');
+      console.log('─'.repeat(80));
       console.log(prompt);
-      console.log('---END OF PROMPT---');
+      console.log('─'.repeat(80));
+      console.log('\n⏳ Invoking LLM...\n');
 
       const messages = [
         new SystemMessage('You are an expert mind mapping assistant. Provide responses in valid JSON format.'),
         new HumanMessage(prompt)
       ];
 
-      const response = await this.llm.invoke(messages);
-      console.log('OpenAI response received, length:', response.content?.length);
-      console.log('Response preview:', response.content?.substring(0, 300));
+      // Add a timeout wrapper around the LLM call
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OpenAI API call timeout after 30 seconds')), 30000)
+      );
+
+      let response;
+      try {
+        response = await Promise.race([this.llm.invoke(messages), timeoutPromise]);
+      } catch (apiError) {
+        console.error('❌ OpenAI API error:', apiError.message);
+        throw new Error(`OpenAI API failed: ${apiError.message}`);
+      }
+      
+      if (!response) {
+        console.error('❌ OpenAI returned null/undefined response');
+        throw new Error('No response from OpenAI');
+      }
+      
+      console.log('✅ LLM Response received, length:', response.content?.length);
+      console.log('Response preview:', response.content?.substring(0, 200) + '...\n');
 
       const parsedResponse = this._parseStructuredResponse(response.content);
-      console.log('Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
+      console.log('✅ Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
+      console.log(`${'═'.repeat(80)}\n`);
+
+      if (!parsedResponse || typeof parsedResponse !== 'object') {
+        console.error('❌ Parsed response is invalid:', parsedResponse);
+        throw new Error('Invalid parsed response');
+      }
 
       return parsedResponse;
     } catch (error) {
-      console.error('OpenAI structured generation error:', error.message);
+      console.error('❌ OpenAI structured generation error:', error.message);
       console.error('Error details:', error);
+      console.log(`${'═'.repeat(80)}\n`);
       throw error;
     }
   }

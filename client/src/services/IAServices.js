@@ -12,12 +12,13 @@ class IAService {
   }
 
 
-  async generateNodes(nodeText, nodeTipo, count = 3) {
+  async generateNodes(nodeText, nodeTipo, count = 3, nodeContext = null) {
     try {
       const response = await this.apiClient.post('/api/mindmap/generate-nodes', {
         nodeText,
         nodeTipo,
-        count
+        count,
+        nodeContext  // Pasar contexto opcional
       });
 
       if (response.data.success && response.data.nodes) {

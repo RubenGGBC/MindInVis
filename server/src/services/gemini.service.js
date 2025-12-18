@@ -14,12 +14,19 @@ class GeminiService {
     console.log('Gemini instance created');
   }
 
-  async generateNodes(nodeText, nodeTipo, count = 3, useStructured = true, description = '') {
+  async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null) {
     try {
       console.log(`Generating ${count} nodes for "${nodeText}" (type: ${nodeTipo})`);
+      
+      if (nodeContextData) {
+        console.log('With node context:', {
+          level: nodeContextData.pathLength,
+          firstQuestion: nodeContextData.firstQuestion
+        });
+      }
 
       // Siempre usar generación estructurada con PromptBuilder para obtener descripciones
-      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, description);
+      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData);
     } catch (error) {
       console.error('Gemini generation error:', error.message);
       console.error('Error details:', error);
@@ -37,20 +44,35 @@ class GeminiService {
     }
   }
 
-  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '') {
+  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '', nodeContextData = null) {
     try {
       console.log('Using PromptBuilder for node generation');
+      console.log('Input:', { nodeText, nodeTipo, count, hasNodeContext: !!nodeContextData });
 
       const nodeContext = {
-        _styles: [
-          { name: 'Number of items', value: count },
-          { name: 'Description', value: description || 'are relevant and provide meaningful context' }
-        ]
+        _styles: {
+          llmSuggestedItems: count
+        }
       };
 
       let question = nodeText;
+      let promptType = 'basic';
+      let options = {};
 
-      const result = await this.generateStructuredNodes(nodeContext, question, 'basic', {});
+      // Si hay contexto de padres y el tipo es respuesta, usar preguntas sugeridas con contexto
+      if (nodeContextData && nodeTipo === 'respuesta' && nodeContextData.pathLength >= 3) {
+        promptType = 'suggested-llm';
+        options = {
+          answerLabel: nodeContextData.currentAnswer,
+          answerNote: nodeContextData.currentAnswerNote,
+          previousQuestion: nodeContextData.previousQuestion,
+          firstQuestion: nodeContextData.firstQuestion
+        };
+        
+        console.log(`Using suggested-llm prompt with context`);
+      }
+
+      const result = await this.generateStructuredNodes(nodeContext, question, promptType, options);
 
       const nodes = this._extractNodesFromStructuredResponse(result, count);
 

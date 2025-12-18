@@ -16,7 +16,7 @@ import Toolbar from '../components/editor/Toolbar';
 import MindMapNode from '../models/MindMapNode';
 import IAService from '../services/IAServices';
 import { editorReducer, getInitialState, actionCreators } from '../reducers/editorReducer';
-import { findNodeById, calculateChildrenPositions, findParentNode } from '../utils/nodeUtils';
+import { findNodeById, calculateChildrenPositions, findParentNode, getNodePath } from '../utils/nodeUtils';
 import ReactFlowNode from '../components/editor/ReactFlowNode';
 
 const nodeTypes = {
@@ -79,10 +79,16 @@ const treeToFlow = (
 
 // Determina el tipo de hijo basado en el tipo del padre
 function getChildTipo(parentTipo) {
-  if (parentTipo === 'pregunta' || parentTipo === 'root') {
-    return 'respuesta';
+  // root → respuesta (respuestas iniciales)
+  // respuesta → pregunta (preguntas sobre la respuesta)
+  // pregunta → respuesta (respuestas - CON CONTEXTO)
+  
+  if (parentTipo === 'root') {
+    return 'respuesta';  // Root generates answers (tipo respuesta)
   } else if (parentTipo === 'respuesta') {
-    return 'pregunta';
+    return 'pregunta';   // Answers generate questions (tipo pregunta)
+  } else if (parentTipo === 'pregunta') {
+    return 'respuesta';  // Questions generate answers (tipo respuesta)
   }
   return 'respuesta'; // fallback
 }
@@ -284,11 +290,41 @@ const Editor = () => {
       setIsLoading(true);
 
       try {
-        // Llamar a la API real con el tipo de nodo
+        // Obtener el path completo del nodo actual (para contexto)
+        const nodePath = getNodePath(state.tree, editingNodeId);
+        
+        // Construir contexto del nodo SOLO PARA PREGUNTAS
+        // Las preguntas generan respuestas CON CONTEXTO
+        let nodeContext = null;
+        if (nodePath && nodePath.length >= 2 && editingNode.tipo === 'pregunta') {
+          const pathLength = nodePath.length;
+          const rootNode = nodePath[0];
+          const parentNode = nodePath[pathLength - 2];
+          
+          nodeContext = {
+            pathLength: pathLength,
+            fullPath: nodePath.map(n => n.text),
+            firstQuestion: rootNode?.text || '',
+            previousQuestion: parentNode?.text || '',
+            currentAnswer: editingText,
+            currentAnswerNote: editingNode.description || ''
+          };
+          
+          console.log('📍 CONTEXTO DETECTADO - Nodo tipo pregunta:', {
+            pathLength: nodeContext.pathLength,
+            fullPath: nodeContext.fullPath,
+            firstQuestion: nodeContext.firstQuestion,
+            previousQuestion: nodeContext.previousQuestion,
+            currentAnswer: nodeContext.currentAnswer
+          });
+        }
+        
+        // Llamar a la API real con el tipo de nodo y contexto opcional
         const responses = await iaService.generateNodes(
           editingText,
           editingNode.tipo,
-          3 // Cantidad de nodos a generar
+          3, // Cantidad de nodos a generar
+          nodeContext
         );
 
         const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);

@@ -6,22 +6,42 @@ export const generateNodes = async (req, res, next) => {
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.warn('Validation errors:', errors.array());
+      console.warn('❌ Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
       });
     }
 
-    const { nodeText, nodeTipo, count = 3 } = req.body;
+    const { nodeText, nodeTipo, count = 3, nodeContext } = req.body;
 
-    console.log(`\nPOST /api/mindmap/generate-nodes`);
-    console.log(`   Input: nodeText="${nodeText}", nodeTipo="${nodeTipo}", count=${count}`);
+    console.log('\n' + '═'.repeat(80));
+    console.log('🎯 POST /api/mindmap/generate-nodes');
+    console.log('═'.repeat(80));
+    console.log(`Request Parameters:`);
+    console.log(`  • Node Text: "${nodeText}"`);
+    console.log(`  • Node Type: ${nodeTipo}`);
+    console.log(`  • Count: ${count}`);
+    
+    if (nodeContext) {
+      console.log(`\n✨ CONTEXT RECEIVED (Respuestas con contexto):`);
+      console.log(`  • Path Length: ${nodeContext.pathLength}`);
+      console.log(`  • Full Path: ${nodeContext.fullPath?.join(' → ') || 'N/A'}`);
+      console.log(`  • Root (L1): "${nodeContext.firstQuestion}"`);
+      console.log(`  • Pregunta (L${nodeContext.pathLength - 1}): "${nodeContext.previousQuestion}"`);
+      console.log(`  • Generando respuesta desde: "${nodeContext.currentAnswer}"`);
+      console.log(`\n  → PromptBuilder will use CONTEXTUAL prompt`);
+    } else {
+      console.log(`\n⚠️  NO CONTEXT (Respuestas básicas)`);
+      console.log(`  → PromptBuilder will use BASIC prompt`);
+    }
 
     // Call OpenAI service
-    const result = await openaiService.generateNodes(nodeText, nodeTipo, count);
+    console.log('\n⏳ Calling OpenAI service...');
+    const result = await openaiService.generateNodes(nodeText, nodeTipo, count, nodeContext);
 
-    console.log(`Successfully generated ${result.nodes.length} nodes`);
+    console.log(`\n✅ Successfully generated ${result.nodes.length} nodes`);
+    console.log('═'.repeat(80) + '\n');
 
     // Success response
     res.json({
@@ -30,11 +50,12 @@ export const generateNodes = async (req, res, next) => {
       metadata: {
         model: 'gpt-3.5-turbo',
         count: result.nodes.length,
-        tipo: nodeTipo
+        tipo: nodeTipo,
+        hasContext: !!nodeContext
       }
     });
   } catch (error) {
-    console.error('Controller error:', error.message);
+    console.error('❌ Controller error:', error.message);
     next(error);
   }
 };
@@ -77,6 +98,12 @@ export const generateNodeDetail = async (req, res, next) => {
     );
 
     console.log(`Successfully generated detail for node`);
+    console.log('Result structure:', {
+      hasParseError: !!result.parseError,
+      hasItems: !!result.items,
+      itemsLength: result.items?.length,
+      hasRaw: !!result.raw
+    });
 
     let description = '';
 
@@ -84,7 +111,27 @@ export const generateNodeDetail = async (req, res, next) => {
       console.warn('Failed to parse JSON, using raw response');
       description = result.raw || 'Error al generar descripción';
     } else if (result.items && Array.isArray(result.items) && result.items.length > 0) {
-      description = result.items[0].description || result.items[0].GPT_item_name || '';
+      const firstItem = result.items[0];
+      console.log('First item:', JSON.stringify(firstItem).substring(0, 200));
+      
+      // Handle different response formats from OpenAI
+      if (firstItem.description) {
+        // Standard format: {"GPT_item_name": "...", "description": "..."}
+        description = firstItem.description;
+      } else if (firstItem.GPT_item_name) {
+        description = firstItem.GPT_item_name;
+      } else {
+        // OpenAI might return: {"Topic Name": {"description": "..."}}
+        for (const [key, value] of Object.entries(firstItem)) {
+          if (key !== 'description' && key !== 'excerpt' && typeof value === 'object' && value.description) {
+            description = value.description;
+            break;
+          } else if (key !== 'description' && typeof value === 'string') {
+            description = value;
+            break;
+          }
+        }
+      }
     } else if (result.raw) {
       description = result.raw;
     } else {

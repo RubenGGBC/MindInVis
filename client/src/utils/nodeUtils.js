@@ -306,6 +306,37 @@ export function findParentNode(tree, nodeId) {
   return null;
 }
 
+/**
+ * Obtiene el camino completo (path) desde la raíz hasta un nodo específico
+ * @param {Object} tree - Nodo raíz del árbol
+ * @param {string} nodeId - ID del nodo objetivo
+ * @returns {Array<Object>|null} - Array de nodos del path [root, ..., target] o null si no existe
+ */
+export function getNodePath(tree, nodeId) {
+  if (!tree) return null;
+  
+  function findPath(node, targetId, currentPath = []) {
+    const newPath = [...currentPath, node];
+    
+    if (node.id === targetId) {
+      return newPath;
+    }
+    
+    if (node.children && node.children.length > 0) {
+      for (const child of node.children) {
+        const foundPath = findPath(child, targetId, newPath);
+        if (foundPath) {
+          return foundPath;
+        }
+      }
+    }
+    
+    return null;
+  }
+  
+  return findPath(tree, nodeId);
+}
+
 // ============================================
 // LAYOUT DINÁMICO - Sistema tipo MindMeister
 // ============================================
