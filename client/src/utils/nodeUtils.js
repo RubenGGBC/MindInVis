@@ -171,7 +171,7 @@ export function validateNodeTree(tree) {
   const errors = [];
 
   if (!tree) {
-    errors.push('El árbol no puede ser null o undefined');
+    errors.push('Tree cannot be null or undefined');
     return { valid: false, errors };
   }
 

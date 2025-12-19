@@ -14,53 +14,53 @@ const Toolbar = ({
   return (
     <div className="toolbar-container">
       <div className="toolbar-group">
-        <span className="toolbar-group-label">Nodos</span>
+        <span className="toolbar-group-label">Nodes</span>
         <button
           className="toolbar-btn"
           onClick={onAddNode}
-          title="Añadir nodo hijo"
+          title="Add child node"
           disabled={!selectedNode}
         >
           <Plus size={18} />
-          <span>Añadir</span>
+          <span>Add</span>
         </button>
         <button
           className="toolbar-btn delete"
           onClick={onDeleteNode}
-          title="Eliminar nodo"
+          title="Delete node"
           disabled={!selectedNode}
         >
           <Trash2 size={18} />
-          <span>Eliminar</span>
+          <span>Delete</span>
         </button>
         <button
           className="toolbar-btn"
           onClick={onReorganize}
-          title="Reorganizar nodos a posiciones iniciales"
+          title="Reorganize nodes to initial positions"
         >
           <LayoutGrid size={18} />
-          <span>Reorganizar</span>
+          <span>Reorganize</span>
         </button>
       </div>
       <div className="toolbar-group">
-        <span className="toolbar-group-label">Historial</span>
+        <span className="toolbar-group-label">History</span>
         <button
           className="toolbar-btn"
           onClick={onUndo}
-          title="Deshacer"
+          title="Undo"
           disabled={!canUndo}
         >
           <Undo size={18} />
-          <span>Deshacer</span>
+          <span>Undo</span>
         </button>
         <button
           className="toolbar-btn"
           onClick={onRedo}
-          title="Rehacer"
+          title="Redo"
           disabled={!canRedo}
         >
           <Redo size={18} />
-          <span>Rehacer</span>
+          <span>Redo</span>
         </button>
       </div>
     </div>

@@ -104,19 +104,19 @@ class MindMapNode {
   static fromJSON(data) {
     // Validación de datos requeridos
     if (!data || typeof data !== 'object') {
-      throw new Error('Invalid node data: debe ser un objeto');
+      throw new Error('Invalid node data: must be an object');
     }
 
     if (!data.id || typeof data.id !== 'string') {
-      throw new Error('Invalid node data: id es requerido y debe ser string');
+      throw new Error('Invalid node data: id is required and must be a string');
     }
 
     if (typeof data.text !== 'string') {
-      throw new Error('Invalid node data: text debe ser string');
+      throw new Error('Invalid node data: text must be a string');
     }
 
     if (typeof data.x !== 'number' || typeof data.y !== 'number') {
-      throw new Error('Invalid node data: x e y deben ser números');
+      throw new Error('Invalid node data: x and y must be numbers');
     }
 
     // Crear nodo con valores validados
@@ -155,7 +155,7 @@ class MindMapNode {
           try {
             return MindMapNode.fromJSON(childData);
           } catch (error) {
-            console.error(`Error deserializando hijo ${index}:`, error);
+            console.error(`Error deserializing child ${index}:`, error);
             return null;
           }
         })

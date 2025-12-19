@@ -35,27 +35,27 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
     const newErrors = {};
 
     if (!formData.name) {
-      newErrors.name = 'El nombre es requerido';
+      newErrors.name = 'Name is required';
     } else if (formData.name.length < 2) {
-      newErrors.name = 'El nombre debe tener al menos 2 caracteres';
+      newErrors.name = 'Name must be at least 2 characters';
     }
 
     if (!formData.email) {
-      newErrors.email = 'El correo electrónico es requerido';
+      newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Por favor ingresa un correo electrónico válido';
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
+      newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+      newErrors.password = 'Password must be at least 6 characters';
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Por favor confirma tu contraseña';
+      newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Las contraseñas no coinciden';
+      newErrors.confirmPassword = 'Passwords do not match';
     }
 
     return newErrors;
@@ -119,10 +119,10 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
   const getStrengthText = () => {
     if (passwordStrength === 0) return '';
-    if (passwordStrength <= 1) return 'Débil';
-    if (passwordStrength <= 2) return 'Media';
-    if (passwordStrength <= 3) return 'Buena';
-    return 'Fuerte';
+    if (passwordStrength <= 1) return 'Weak';
+    if (passwordStrength <= 2) return 'Medium';
+    if (passwordStrength <= 3) return 'Good';
+    return 'Strong';
   };
 
   return (
@@ -135,8 +135,8 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
             </div>
             <span className="auth-logo-text">MindInVis</span>
           </div>
-          <h1 className="auth-title">Crea tu cuenta</h1>
-          <p className="auth-subtitle">Comienza a crear mapas mentales increíbles</p>
+          <h1 className="auth-title">Create your account</h1>
+          <p className="auth-subtitle">Start creating amazing mind maps</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -149,7 +149,7 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="name" className="form-label">
-              Nombre completo
+              Full name
             </label>
             <div className={`input-wrapper ${errors.name ? 'error' : ''}`}>
               <User size={18} className="input-icon" />
@@ -160,7 +160,7 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
                 value={formData.name}
                 onChange={handleChange}
                 className="form-input"
-                placeholder="Juan Pérez"
+                placeholder="John Doe"
               />
             </div>
             {errors.name && (
@@ -173,7 +173,7 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="email" className="form-label">
-              Correo electrónico
+              Email
             </label>
             <div className={`input-wrapper ${errors.email ? 'error' : ''}`}>
               <Mail size={18} className="input-icon" />
@@ -197,7 +197,7 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              Contraseña
+              Password
             </label>
             <div className={`input-wrapper ${errors.password ? 'error' : ''}`}>
               <Lock size={18} className="input-icon" />
@@ -245,7 +245,7 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="confirmPassword" className="form-label">
-              Confirmar contraseña
+              Confirm password
             </label>
             <div className={`input-wrapper ${errors.confirmPassword ? 'error' : formData.confirmPassword && formData.password === formData.confirmPassword ? 'success' : ''}`}>
               <Lock size={18} className="input-icon" />
@@ -278,17 +278,17 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
           </div>
 
           <button type="submit" className="auth-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Creando cuenta...' : 'Crear cuenta'}
+            {isSubmitting ? 'Creating account...' : 'Create account'}
           </button>
 
           <div className="auth-divider">
-            <span>o</span>
+            <span>or</span>
           </div>
 
           <p className="auth-footer">
-            ¿Ya tienes una cuenta?{' '}
+            Already have an account?{' '}
             <button type="button" className="link-button" onClick={onSwitchToLogin}>
-              Inicia sesión
+              Sign in
             </button>
           </p>
         </form>

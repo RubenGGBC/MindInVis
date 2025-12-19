@@ -8,7 +8,7 @@ const Header = ({ userName = "Ruben" }) => {
         <Search size={18} className="search-icon" />
         <input
           type="text"
-          placeholder="Buscar mapas o crear nuevo con IA..."
+          placeholder="Search maps or create new with AI..."
           className="search-input"
         />
         <div className="search-shortcut">

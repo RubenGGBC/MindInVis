@@ -6,6 +6,8 @@ import { AuthContainer } from './components/auth';
 import ErrorBoundary from './components/ErrorBoundary';
 import './App.css';
 
+import { MapDataProvider } from './context/MapDataContext';
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userName, setUserName] = useState('');
@@ -25,13 +27,15 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home userName={userName} />} />
-          <Route path="/editor" element={<Editor />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
-      </BrowserRouter>
+      <MapDataProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Home userName={userName} />} />
+            <Route path="/editor" element={<Editor />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </BrowserRouter>
+      </MapDataProvider>
     </ErrorBoundary>
   );
 }

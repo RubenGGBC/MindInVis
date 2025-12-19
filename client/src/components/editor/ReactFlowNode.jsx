@@ -22,6 +22,24 @@ function getDefaultBorderColor(tipo) {
   }
 }
 
+// Función para calcular el tamaño de fuente dinámicamente
+function calculateFontSize(text, width, height) {
+  const textLength = text.length;
+  const containerArea = width * height;
+  
+  // Estimación: menos caracteres = fuente más grande
+  // Máximo: 18px, Mínimo: 10px
+  if (textLength <= 20) {
+    return 16;
+  } else if (textLength <= 50) {
+    return 14;
+  } else if (textLength <= 100) {
+    return 12;
+  } else {
+    return 10;
+  }
+}
+
 const ReactFlowNode = ({ data }) => {
   const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, selected } = data;
   const [showPopup, setShowPopup] = useState(false);
@@ -52,10 +70,14 @@ const ReactFlowNode = ({ data }) => {
     setShowPopup(!showPopup);
   };
 
+  const width = node.width || 200;
+  const height = node.height || 80;
+  const dynamicFontSize = calculateFontSize(node.text, width, height);
+
   const nodeStyle = {
-    width: `${node.width || 200}px`,
-    height: `${node.height || 80}px`, // Revertir a altura fija
-    fontSize: `${node.fontSize || 16}px`,
+    width: `${width}px`,
+    height: `${height}px`,
+    fontSize: `${dynamicFontSize}px`,
     backgroundColor: node.backgroundColor || getDefaultBackgroundColor(node.tipo),
     borderColor: node.borderColor || getDefaultBorderColor(node.tipo),
     borderWidth: `${node.borderWidth || 2}px`,
@@ -76,7 +98,7 @@ const ReactFlowNode = ({ data }) => {
             value={node.text}
             onChange={(e) => onTextChange(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Escribe tu pregunta..."
+            placeholder="Type your question..."
             className="node-input"
             autoFocus
             disabled={isLoading}
@@ -84,7 +106,7 @@ const ReactFlowNode = ({ data }) => {
           {isLoading && (
             <div className="node-loading">
               <div className="spinner"></div>
-              <span>Generando con IA...</span>
+              <span>Generating with AI...</span>
             </div>
           )}
         </div>
@@ -99,7 +121,7 @@ const ReactFlowNode = ({ data }) => {
         <button
           className="node-collapse-button"
           onClick={handleToggleCollapse}
-          title={node.collapsed ? "Expandir hijos" : "Colapsar hijos"}
+          title={node.collapsed ? "Expand children" : "Collapse children"}
         >
           {node.collapsed ? '▶' : '▼'}
         </button>
@@ -108,7 +130,7 @@ const ReactFlowNode = ({ data }) => {
         <button
           className="node-add-button"
           onClick={handleAddClick}
-          title="Agregar nodo hijo"
+          title="Add child node"
         >
           +
         </button>
@@ -117,7 +139,7 @@ const ReactFlowNode = ({ data }) => {
         <button
           className="node-details-button"
           onClick={handleTogglePopup}
-          title="Ver detalles de IA"
+          title="View AI details"
         >
           i
         </button>

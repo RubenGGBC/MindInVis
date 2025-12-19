@@ -14,8 +14,12 @@ if (!process.env.OPENAI_API_KEY) {
   process.exit(1);
 }
 
+// Import database connection
+import connectDB from './config/database.js';
+
 // Import routes (AFTER dotenv.config())
 import mindmapRoutes from './routes/mindmap.routes.js';
+import authRoutes from './routes/auth.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -43,6 +47,7 @@ app.get('/health', (req, res) => {
 });
 
 // API Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/mindmap', mindmapRoutes);
 
 // 404 handler
@@ -57,11 +62,19 @@ app.use((req, res) => {
 app.use(errorHandler);
 
 // Start server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
   console.log(`\nServer running on port ${PORT}`);
   console.log(`CORS enabled for: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
   console.log(`OpenAI API configured: ${process.env.OPENAI_API_KEY ? 'configured' : 'not configured'}`);
   console.log(`Health check: http://localhost:${PORT}/health\n`);
+  
+  // Connect to MongoDB
+  try {
+    await connectDB();
+  } catch (error) {
+    console.error('Failed to connect to MongoDB:', error);
+    process.exit(1);
+  }
 });
 
 // Graceful shutdown
@@ -72,3 +85,4 @@ process.on('SIGTERM', () => {
     process.exit(0);
   });
 });
+

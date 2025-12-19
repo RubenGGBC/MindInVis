@@ -32,7 +32,7 @@ const NodeDetailPanel = ({ node, onClose, onUpdateDescription }) => {
       }
     } catch (err) {
       console.error('Error generating detail:', err);
-      setError('Error al generar detalle. Intenta de nuevo.');
+      setError('Error generating detail. Try again.');
     } finally {
       setIsGenerating(false);
     }
@@ -52,8 +52,8 @@ const NodeDetailPanel = ({ node, onClose, onUpdateDescription }) => {
   return (
     <div className="node-detail-panel">
       <div className="panel-header">
-        <h3>Detalles del Nodo</h3>
-        <button className="close-button" onClick={onClose} title="Cerrar panel">
+        <h3>Node Details</h3>
+        <button className="close-button" onClick={onClose} title="Close panel">
           <X size={20} />
         </button>
       </div>
@@ -61,33 +61,33 @@ const NodeDetailPanel = ({ node, onClose, onUpdateDescription }) => {
       <div className="panel-content">
         <div className="node-info">
           <div className="info-row">
-            <span className="label">Texto:</span>
+            <span className="label">Text:</span>
             <span className="value">{node.text}</span>
           </div>
           <div className="info-row">
-            <span className="label">Tipo:</span>
+            <span className="label">Type:</span>
             <span className={`badge badge-${node.tipo}`}>{node.tipo}</span>
           </div>
         </div>
 
         <div className="description-section">
           <div className="section-header">
-            <span className="label">Descripción Detallada</span>
+            <span className="label">Detailed Description</span>
             <button
               className="generate-button"
               onClick={handleGenerateDetail}
               disabled={isGenerating}
-              title="Generar descripción con IA"
+              title="Generate description with AI"
             >
               {isGenerating ? (
                 <>
                   <Loader2 size={16} className="spinning" />
-                  <span>Generando...</span>
+                  <span>Generating...</span>
                 </>
               ) : (
                 <>
                   <Sparkles size={16} />
-                  <span>Generar con IA</span>
+                  <span>Generate with AI</span>
                 </>
               )}
             </button>
@@ -103,32 +103,32 @@ const NodeDetailPanel = ({ node, onClose, onUpdateDescription }) => {
             className="description-textarea"
             value={description}
             onChange={handleDescriptionChange}
-            placeholder="Agrega una descripción detallada del nodo o genera una con IA..."
+            placeholder="Add a detailed description of the node or generate one with AI..."
             disabled={isGenerating}
           />
         </div>
 
         <div className="metadata-section">
-          <h4>Metadatos</h4>
+          <h4>Metadata</h4>
           <div className="metadata-grid">
             <div className="metadata-item">
               <span className="metadata-label">ID:</span>
               <span className="metadata-value">{node.id}</span>
             </div>
             <div className="metadata-item">
-              <span className="metadata-label">Creado:</span>
+              <span className="metadata-label">Created:</span>
               <span className="metadata-value">
                 {new Date(node.createdAt).toLocaleString()}
               </span>
             </div>
             <div className="metadata-item">
-              <span className="metadata-label">Modificado:</span>
+              <span className="metadata-label">Modified:</span>
               <span className="metadata-value">
                 {new Date(node.lastModified).toLocaleString()}
               </span>
             </div>
             <div className="metadata-item">
-              <span className="metadata-label">Hijos:</span>
+              <span className="metadata-label">Children:</span>
               <span className="metadata-value">{node.children?.length || 0}</span>
             </div>
           </div>

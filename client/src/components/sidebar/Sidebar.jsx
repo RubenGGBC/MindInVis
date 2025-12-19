@@ -3,8 +3,8 @@ import './Sidebar.css';
 
 const Sidebar = () => {
   const stats = [
-    { label: 'Mapas creados', value: '24', color: 'cyan' },
-    { label: 'Con IA', value: '18', color: 'purple' },
+    { label: 'Maps created', value: '24', color: 'cyan' },
+    { label: 'AI generated', value: '18', color: 'purple' },
   ];
 
   return (
@@ -24,19 +24,19 @@ const Sidebar = () => {
             <div className="nav-icon">
               <Home size={20} />
             </div>
-            <span className="nav-label">Inicio</span>
+            <span className="nav-label">Home</span>
           </button>
           <button className="nav-item">
             <div className="nav-icon">
               <Star size={20} />
             </div>
-            <span className="nav-label">Favoritos</span>
+            <span className="nav-label">Favorites</span>
           </button>
           <button className="nav-item">
             <div className="nav-icon">
               <Settings size={20} />
             </div>
-            <span className="nav-label">Ajustes</span>
+            <span className="nav-label">Settings</span>
           </button>
         </div>
       </nav>
@@ -44,7 +44,7 @@ const Sidebar = () => {
       <div className="sidebar-stats">
         <div className="stats-header">
           <TrendingUp size={16} />
-          <span>Tu actividad</span>
+          <span>Your activity</span>
         </div>
         {stats.map((stat, index) => (
           <div key={index} className={`stat-item ${stat.color}`}>
@@ -59,7 +59,7 @@ const Sidebar = () => {
           <Sparkles size={18} />
           <div className="upgrade-text">
             <span className="upgrade-title">Upgrade Pro</span>
-            <span className="upgrade-subtitle">Desbloquea todo</span>
+            <span className="upgrade-subtitle">Unlock everything</span>
           </div>
         </button>
       </div>

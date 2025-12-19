@@ -79,16 +79,14 @@ const treeToFlow = (
 
 // Determina el tipo de hijo basado en el tipo del padre
 function getChildTipo(parentTipo) {
-  // root → respuesta (respuestas iniciales)
-  // respuesta → pregunta (preguntas sobre la respuesta)
-  // pregunta → respuesta (respuestas - CON CONTEXTO)
+  // pregunta → respuesta
+  // respuesta → pregunta
+  // (Nota: root no existe más, es ahora una pregunta)
   
-  if (parentTipo === 'root') {
-    return 'respuesta';  // Root generates answers (tipo respuesta)
+  if (parentTipo === 'pregunta') {
+    return 'respuesta';  // Questions generate answers (with context if depth >= 2)
   } else if (parentTipo === 'respuesta') {
-    return 'pregunta';   // Answers generate questions (tipo pregunta)
-  } else if (parentTipo === 'pregunta') {
-    return 'respuesta';  // Questions generate answers (tipo respuesta)
+    return 'pregunta';   // Answers generate questions (without context)
   }
   return 'respuesta'; // fallback
 }
@@ -98,7 +96,7 @@ const Editor = () => {
 
   // Estado del editor con reducer
   const initialRootNode = useMemo(() =>
-    new MindMapNode('root', 'Tema Central', 200, 400, 'root'), []
+    new MindMapNode('root', 'Tema Central', 200, 400, 'pregunta'), []
   );
   const [state, dispatch] = useReducer(editorReducer, initialRootNode, getInitialState);
 
@@ -111,7 +109,7 @@ const Editor = () => {
   );
 
   // Estados UI
-  const [mapName, setMapName] = useState('Mapa sin título');
+  const [mapName, setMapName] = useState('Untitled map');
   const [editingNodeId, setEditingNodeId] = useState(null);
   const [editingText, setEditingText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -238,7 +236,7 @@ const Editor = () => {
   // Eliminar un nodo
   const handleDeleteNode = useCallback(() => {
     if (!selectedNode || selectedNode.id === 'root') {
-      alert('No puedes eliminar el nodo raíz');
+      alert('Cannot delete the root node');
       return;
     }
 
@@ -292,14 +290,23 @@ const Editor = () => {
       try {
         // Obtener el path completo del nodo actual (para contexto)
         const nodePath = getNodePath(state.tree, editingNodeId);
+        const currentNode = findNodeById(state.tree, editingNodeId);
         
-        // Construir contexto del nodo SOLO PARA PREGUNTAS
-        // Las preguntas generan respuestas CON CONTEXTO
+        console.log('📝 DEBUG currentNode:', {
+          id: currentNode?.id,
+          tipo: currentNode?.tipo,
+          text: currentNode?.text,
+          hasGeneratedChildren: currentNode?.hasGeneratedChildren
+        });
+        
+        // Construir contexto del nodo SOLO PARA RESPUESTAS
+        // Las RESPUESTAS generan PREGUNTAS CON CONTEXTO
+        // Las PREGUNTAS generan RESPUESTAS SIN CONTEXTO
         let nodeContext = null;
-        if (nodePath && nodePath.length >= 2 && editingNode.tipo === 'pregunta') {
+        if (nodePath && currentNode && currentNode.tipo === 'respuesta') {
           const pathLength = nodePath.length;
           const rootNode = nodePath[0];
-          const parentNode = nodePath[pathLength - 2];
+          const parentNode = pathLength > 1 ? nodePath[pathLength - 2] : null;
           
           nodeContext = {
             pathLength: pathLength,
@@ -307,27 +314,33 @@ const Editor = () => {
             firstQuestion: rootNode?.text || '',
             previousQuestion: parentNode?.text || '',
             currentAnswer: editingText,
-            currentAnswerNote: editingNode.description || ''
+            currentAnswerNote: currentNode.description || ''
           };
           
-          console.log('📍 CONTEXTO DETECTADO - Nodo tipo pregunta:', {
+          console.log('📍 CONTEXTO DETECTADO - Nodo tipo respuesta (generando preguntas):', {
             pathLength: nodeContext.pathLength,
             fullPath: nodeContext.fullPath,
             firstQuestion: nodeContext.firstQuestion,
             previousQuestion: nodeContext.previousQuestion,
             currentAnswer: nodeContext.currentAnswer
           });
+        } else {
+          console.log('⚪ No context needed - Generating answers from question (no context required)');
         }
         
         // Llamar a la API real con el tipo de nodo y contexto opcional
+        // Enviar el TIPO DEL PADRE (no del hijo) para que el servidor sepa si usar contexto
         const responses = await iaService.generateNodes(
           editingText,
-          editingNode.tipo,
+          currentNode.tipo,  // TIPO DEL PADRE (pregunta o respuesta)
           3, // Cantidad de nodos a generar
           nodeContext
         );
 
-        const positions = calculateChildrenPositions(editingNode, responses.length, state.tree);
+        const positions = calculateChildrenPositions(currentNode, responses.length, state.tree);
+
+        // Calcular el tipo de los hijos
+        const childType = getChildTipo(currentNode.tipo);
 
         const childrenNodes = responses.map((response, index) => {
           const position = positions[index];
@@ -341,7 +354,7 @@ const Editor = () => {
             text,
             position.x,
             position.y,
-            getChildTipo(editingNode.tipo),
+            childType,
             description,
             source
           );
@@ -441,15 +454,15 @@ const Editor = () => {
         <div className="editor-header-right">
           <button className="editor-btn secondary">
             <Save size={18} />
-            Guardar
+            Save
           </button>
           <button className="editor-btn secondary">
             <Share2 size={18} />
-            Compartir
+            Share
           </button>
           <button className="editor-btn primary">
             <Sparkles size={18} />
-            IA
+            AI
           </button>
         </div>
       </header>

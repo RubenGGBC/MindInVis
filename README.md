@@ -1,101 +1,101 @@
 # MindInVis
 
-Aplicación web para mind mapping con integración de LLM, basada en ChatInVis.
+A web application for mind mapping with LLM integration, based on ChatInVis.
 
-## Estructura del Proyecto
+## Project Structure
 
 ```
 MindInVis/
 ├── client/         # Frontend (React + Vite)
 ├── server/         # Backend (Node.js + Express)
-├── shared/         # Código compartido
-├── database/       # Migraciones y seeds
-└── docs/          # Documentación
+├── shared/         # Shared code
+├── database/       # Migrations and seeds
+└── docs/           # Documentation
 ```
 
-## Stack Tecnológico
+## Tech Stack
 
 ### Frontend
 - React 18
 - Vite
 - Zustand/Redux (state management)
-- D3.js/Vis.js (visualización de mind map)
+- D3.js/Vis.js (mind map visualization)
 - TailwindCSS/Styled Components
 
 ### Backend
 - Node.js + Express
-- LangChain (integración LLM)
-- PostgreSQL/MongoDB (base de datos)
-- JWT (autenticación)
+- LangChain (LLM integration)
+- PostgreSQL/MongoDB (database)
+- JWT (authentication)
 
-### APIs LLM
+### LLM APIs
 - OpenAI (GPT-4, GPT-3.5)
 - Anthropic (Claude)
 
-## Desarrollo
+## Development
 
-### Instalación
+### Installation
 
 ```bash
-# Instalar dependencias de todo el proyecto
+# Install dependencies for the entire project
 npm install
 
-# Instalar solo frontend
+# Install only frontend
 cd client && npm install
 
-# Instalar solo backend
+# Install only backend
 cd server && npm install
 ```
 
-### Desarrollo Local
+### Local Development
 
 ```bash
-# Iniciar todo (frontend + backend)
+# Start everything (frontend + backend)
 npm run dev
 
-# Solo frontend
+# Only frontend
 npm run dev:client
 
-# Solo backend
+# Only backend
 npm run dev:server
 ```
 
-### Build para Producción
+### Production Build
 
 ```bash
 npm run build
 ```
 
-## Arquitectura
+## Architecture
 
 ### Frontend
-- **Components**: Componentes React reutilizables
-- **Services**: Comunicación con API backend
-- **Store**: Estado global de la aplicación
-- **Hooks**: Custom hooks de React
+- **Components**: Reusable React components
+- **Services**: Backend API communication
+- **Store**: Global application state
+- **Hooks**: Custom React hooks
 
 ### Backend
-- **Controllers**: Lógica de controladores de rutas
-- **Services**: Lógica de negocio (LLM, Mindmap, etc.)
-- **Models**: Modelos de datos
-- **Routes**: Definición de endpoints API
-- **Middleware**: Autenticación, validación, error handling
+- **Controllers**: Route controller logic
+- **Services**: Business logic (LLM, Mindmap, etc.)
+- **Models**: Data models
+- **Routes**: API endpoint definitions
+- **Middleware**: Authentication, validation, error handling
 
 ### Shared
-- **Constants**: Constantes compartidas (iconos, estilos de prompts)
-- **Types**: Definiciones de tipos TypeScript
-- **Utils**: Utilidades compartidas
+- **Constants**: Shared constants (icons, prompt styles)
+- **Types**: TypeScript type definitions
+- **Utils**: Shared utilities
 
-## Migración desde ChatInVis
+## Migration from ChatInVis
 
-Los siguientes componentes han sido migrados:
+The following components have been migrated:
 
 - `MindmapManager.js` → `server/src/services/mindmap/MindmapManager.js`
 - `LLMManagerBackground.js` → `server/src/services/llm/LLMManager.js`
 - `PromptBuilder.js` → `server/src/services/llm/PromptBuilder.js`
-- Modelos (Problem, Intervention, Consequence) → `server/src/models/`
-- Utils → `server/src/utils/` y `shared/utils/`
+- Models (Problem, Intervention, Consequence) → `server/src/models/`
+- Utils → `server/src/utils/` and `shared/utils/`
 
-## Licencia
+## License
 
 MIT

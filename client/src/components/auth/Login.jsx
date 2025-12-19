@@ -21,15 +21,15 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
     const newErrors = {};
 
     if (!formData.email) {
-      newErrors.email = 'El correo electrónico es requerido';
+      newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Por favor ingresa un correo electrónico válido';
+      newErrors.email = 'Please enter a valid email address';
     }
 
     if (!formData.password) {
-      newErrors.password = 'La contraseña es requerida';
+      newErrors.password = 'Password is required';
     } else if (formData.password.length < 6) {
-      newErrors.password = 'La contraseña debe tener al menos 6 caracteres';
+      newErrors.password = 'Password must be at least 6 characters';
     }
 
     return newErrors;
@@ -79,8 +79,8 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
             </div>
             <span className="auth-logo-text">MindInVis</span>
           </div>
-          <h1 className="auth-title">Bienvenido de nuevo</h1>
-          <p className="auth-subtitle">Inicia sesión para continuar con tus mapas mentales</p>
+          <h1 className="auth-title">Welcome back</h1>
+          <p className="auth-subtitle">Sign in to continue with your mind maps</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -93,7 +93,7 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="email" className="form-label">
-              Correo electrónico
+              Email
             </label>
             <div className={`input-wrapper ${errors.email ? 'error' : ''}`}>
               <Mail size={18} className="input-icon" />
@@ -117,7 +117,7 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
 
           <div className="form-group">
             <label htmlFor="password" className="form-label">
-              Contraseña
+              Password
             </label>
             <div className={`input-wrapper ${errors.password ? 'error' : ''}`}>
               <Lock size={18} className="input-icon" />
@@ -147,17 +147,17 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
           </div>
 
           <button type="submit" className="auth-button" disabled={isSubmitting}>
-            {isSubmitting ? 'Iniciando sesión...' : 'Iniciar sesión'}
+            {isSubmitting ? 'Signing in...' : 'Sign in'}
           </button>
 
           <div className="auth-divider">
-            <span>o</span>
+            <span>or</span>
           </div>
 
           <p className="auth-footer">
-            ¿No tienes una cuenta?{' '}
+            Don't have an account?{' '}
             <button type="button" className="link-button" onClick={onSwitchToRegister}>
-              Regístrate
+              Sign up
             </button>
           </p>
         </form>

@@ -74,36 +74,36 @@ class IAService {
   getMockResponses(question) {
     const lower = question.toLowerCase();
 
-    if (lower.includes('ia') || lower.includes('inteligencia artificial')) {
+    if (lower.includes('ia') || lower.includes('artificial intelligence')) {
       return [
-        { text: 'Machine Learning', description: 'Algoritmos que aprenden de datos', source: 'Mock data' },
-        { text: 'Redes Neuronales', description: 'Modelos inspirados en el cerebro humano', source: 'Mock data' },
-        { text: 'Procesamiento de Lenguaje', description: 'Comprensión y generación de texto', source: 'Mock data' },
-        { text: 'Visión por Computadora', description: 'Análisis e interpretación de imágenes', source: 'Mock data' }
+        { text: 'Machine Learning', description: 'Algorithms that learn from data', source: 'Mock data' },
+        { text: 'Neural Networks', description: 'Models inspired by the human brain', source: 'Mock data' },
+        { text: 'Natural Language Processing', description: 'Understanding and generating text', source: 'Mock data' },
+        { text: 'Computer Vision', description: 'Analyzing and interpreting images', source: 'Mock data' }
       ];
     }
 
-    if (lower.includes('programación') || lower.includes('código')) {
+    if (lower.includes('programming') || lower.includes('code')) {
       return [
-        { text: 'Frontend', description: 'Desarrollo de interfaces de usuario', source: 'Mock data' },
-        { text: 'Backend', description: 'Lógica del servidor y bases de datos', source: 'Mock data' },
-        { text: 'Base de Datos', description: 'Almacenamiento y gestión de datos', source: 'Mock data' },
-        { text: 'DevOps', description: 'Automatización y despliegue continuo', source: 'Mock data' }
+        { text: 'Frontend', description: 'User interface development', source: 'Mock data' },
+        { text: 'Backend', description: 'Server logic and databases', source: 'Mock data' },
+        { text: 'Database', description: 'Data storage and management', source: 'Mock data' },
+        { text: 'DevOps', description: 'Automation and continuous deployment', source: 'Mock data' }
       ];
     }
 
     return [
-      { text: 'Concepto 1', description: 'Primera idea relacionada con el tema', source: 'Mock data' },
-      { text: 'Concepto 2', description: 'Segunda perspectiva del concepto', source: 'Mock data' },
-      { text: 'Concepto 3', description: 'Tercera aproximación al tema', source: 'Mock data' }
+      { text: 'Concept 1', description: 'First idea related to the topic', source: 'Mock data' },
+      { text: 'Concept 2', description: 'Second perspective of the concept', source: 'Mock data' },
+      { text: 'Concept 3', description: 'Third approach to the topic', source: 'Mock data' }
     ];
   }
 
   getMockDetail(nodeText, nodeTipo) {
-    if (nodeTipo === 'pregunta' || nodeTipo === 'root') {
-      return `Esta es una pregunta importante que requiere análisis profundo. El concepto "${nodeText}" involucra múltiples aspectos que deben ser considerados cuidadosamente para obtener una comprensión completa del tema.`;
+    if (nodeTipo === 'question' || nodeTipo === 'root') {
+      return `This is an important question that requires in-depth analysis. The concept "${nodeText}" involves multiple aspects that should be carefully considered to gain a complete understanding of the topic.`;
     } else {
-      return `El concepto "${nodeText}" es una respuesta clave que aborda aspectos fundamentales del tema. Su importancia radica en cómo conecta diferentes ideas y proporciona una perspectiva valiosa para la exploración del mapa mental.`;
+      return `The concept "${nodeText}" is a key answer that addresses fundamental aspects of the topic. Its importance lies in how it connects different ideas and provides a valuable perspective for exploring the mind map.`;
     }
   }
 
@@ -140,7 +140,7 @@ class IAService {
 
       clusters.push({
         cluster_name: `Cluster ${i + 1}`,
-        description: `Agrupación de nodos relacionados ${i + 1}`,
+        description: `Grouping of related nodes ${i + 1}`,
         clusteredItems: clusterNodes
       });
     }

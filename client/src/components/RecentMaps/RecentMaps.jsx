@@ -1,59 +1,18 @@
 import { MoreHorizontal, Star, Sparkles, Clock, User } from 'lucide-react';
 import './RecentMaps.css';
 
+import { useMapData } from '../../context/MapDataContext';
+
 const RecentMaps = () => {
-  const recentMaps = [
-    {
-      id: 1,
-      name: 'Introducción a la IA',
-      category: 'Aprendizaje',
-      nodes: 24,
-      createdBy: 'Ruben',
-      modified: 'Hace 2 horas',
-      starred: false,
-      aiGenerated: true,
-      color: 'cyan'
-    },
-    {
-      id: 2,
-      name: 'Plan de proyecto web',
-      category: 'Trabajo',
-      nodes: 32,
-      createdBy: 'Ruben',
-      modified: 'Ayer',
-      starred: true,
-      aiGenerated: false,
-      color: 'purple'
-    },
-    {
-      id: 3,
-      name: 'Lluvia de ideas startup',
-      category: 'Negocios',
-      nodes: 18,
-      createdBy: 'Ruben',
-      modified: 'Hace 3 días',
-      starred: false,
-      aiGenerated: true,
-      color: 'blue'
-    },
-    {
-      id: 4,
-      name: 'Objetivos 2025',
-      category: 'Personal',
-      nodes: 15,
-      createdBy: 'Ruben',
-      modified: 'Hace 1 semana',
-      starred: true,
-      aiGenerated: false,
-      color: 'pink'
-    },
-  ];
+  const { recentMaps } = useMapData();
+
+  // Aquí podrías agregar lógica para actualizar, filtrar o manipular recentMaps si es necesario
 
   return (
     <div className="recent-maps-container">
       <div className="recent-maps-header">
-        <h2 className="section-title">Recientes</h2>
-        <button className="view-all-btn">Ver todos</button>
+        <h2 className="section-title">Recent</h2>
+        <button className="view-all-btn">View all</button>
       </div>
 
       <div className="maps-grid">
@@ -83,7 +42,7 @@ const RecentMaps = () => {
               <div className="map-card-meta">
                 <span className="meta-item">
                   <span className="meta-dot"></span>
-                  {map.nodes} nodos
+                  {map.nodes} nodes
                 </span>
               </div>
             </div>

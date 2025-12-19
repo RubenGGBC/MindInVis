@@ -1,5 +1,367 @@
 import { validationResult } from 'express-validator';
 import openaiService from '../services/openai.service.js';
+import MindMap from '../models/MindMap.js';
+import MindMapNode from '../models/MindMapNode.js';
+
+// ==================== DATABASE OPERATIONS ====================
+
+// Create a new mind map
+export const createMindMap = async (req, res) => {
+  try {
+    const { title, description, category } = req.body;
+    const userId = req.user.id;
+
+    // Create root node
+    const rootNode = await MindMapNode.create({
+      id: `root-${Date.now()}`,
+      text: title || 'Tema Central',
+      type: 'root',
+      x: 200,
+      y: 400
+    });
+
+    // Create mind map
+    const mindMap = await MindMap.create({
+      title: title || 'Untitled map',
+      description,
+      owner: userId,
+      rootNode: rootNode._id,
+      nodes: [rootNode._id],
+      category: category || 'Other'
+    });
+
+    // Populate and return
+    await mindMap.populate(['owner', 'rootNode']);
+
+    res.status(201).json({
+      success: true,
+      message: 'Mind map created successfully',
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Create mind map error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to create mind map'
+    });
+  }
+};
+
+// Get all mind maps for user
+export const getUserMindMaps = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { page = 1, limit = 10, sortBy = 'createdAt' } = req.query;
+
+    const skip = (page - 1) * limit;
+
+    const mindMaps = await MindMap.find({ owner: userId })
+      .sort({ [sortBy]: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .populate('owner', 'name email')
+      .populate('rootNode');
+
+    const total = await MindMap.countDocuments({ owner: userId });
+
+    res.status(200).json({
+      success: true,
+      data: mindMaps,
+      pagination: {
+        total,
+        pages: Math.ceil(total / limit),
+        currentPage: parseInt(page),
+        pageSize: parseInt(limit)
+      }
+    });
+  } catch (error) {
+    console.error('Get user mind maps error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch mind maps'
+    });
+  }
+};
+
+// Get single mind map by ID
+export const getMindMapById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const mindMap = await MindMap.findById(id)
+      .populate('owner', 'name email')
+      .populate('rootNode')
+      .populate('nodes')
+      .populate('collaborators.user', 'name email');
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        error: 'Mind map not found'
+      });
+    }
+
+    // Check if user has access
+    const isOwner = mindMap.owner._id.toString() === userId;
+    const isCollaborator = mindMap.collaborators.some(c => c.user._id.toString() === userId);
+
+    if (!isOwner && !isCollaborator && !mindMap.isPublic) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have access to this mind map'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Get mind map error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch mind map'
+    });
+  }
+};
+
+// Update mind map
+export const updateMindMap = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { title, description, category, isPublic, isStarred, tags } = req.body;
+
+    let mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        error: 'Mind map not found'
+      });
+    }
+
+    // Check if user is owner
+    if (mindMap.owner.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the owner can update this mind map'
+      });
+    }
+
+    // Update fields
+    if (title) mindMap.title = title;
+    if (description !== undefined) mindMap.description = description;
+    if (category) mindMap.category = category;
+    if (isPublic !== undefined) mindMap.isPublic = isPublic;
+    if (isStarred !== undefined) mindMap.isStarred = isStarred;
+    if (tags) mindMap.tags = tags;
+
+    // Add to edit history
+    if (!mindMap.metadata) {
+      mindMap.metadata = {};
+    }
+    if (!mindMap.metadata.editHistory) {
+      mindMap.metadata.editHistory = [];
+    }
+
+    mindMap.metadata.editHistory.push({
+      action: 'updated',
+      user: userId,
+      timestamp: new Date()
+    });
+    mindMap.metadata.lastEditedBy = userId;
+
+    await mindMap.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Mind map updated successfully',
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Update mind map error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to update mind map'
+    });
+  }
+};
+
+// Delete mind map
+export const deleteMindMap = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        error: 'Mind map not found'
+      });
+    }
+
+    // Check if user is owner
+    if (mindMap.owner.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        error: 'Only the owner can delete this mind map'
+      });
+    }
+
+    // Delete all nodes associated with this mind map
+    await MindMapNode.deleteMany({ _id: { $in: mindMap.nodes } });
+
+    // Delete the mind map
+    await MindMap.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Mind map deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete mind map error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to delete mind map'
+    });
+  }
+};
+
+// Save mind map state (all nodes and structure)
+export const saveMindMapState = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { tree, title } = req.body;
+
+    let mindMap = await MindMap.findById(id);
+
+    if (!mindMap) {
+      return res.status(404).json({
+        success: false,
+        error: 'Mind map not found'
+      });
+    }
+
+    // Check if user is owner or editor
+    const isOwner = mindMap.owner.toString() === userId;
+    const isEditor = mindMap.collaborators.some(
+      c => c.user.toString() === userId && (c.role === 'editor' || c.role === 'owner')
+    );
+
+    if (!isOwner && !isEditor) {
+      return res.status(403).json({
+        success: false,
+        error: 'You do not have permission to edit this mind map'
+      });
+    }
+
+    // Save all nodes recursively
+    const saveNodes = async (node) => {
+      const savedNode = await MindMapNode.findOneAndUpdate(
+        { id: node.id },
+        {
+          id: node.id,
+          text: node.text,
+          type: node.type,
+          x: node.x,
+          y: node.y,
+          width: node.width,
+          height: node.height,
+          fontSize: node.fontSize,
+          backgroundColor: node.backgroundColor,
+          borderColor: node.borderColor,
+          borderWidth: node.borderWidth,
+          description: node.description,
+          source: node.source,
+          collapsed: node.collapsed,
+          hasGeneratedChildren: node.hasGeneratedChildren
+        },
+        { upsert: true, new: true }
+      );
+
+      if (!mindMap.nodes.includes(savedNode._id)) {
+        mindMap.nodes.push(savedNode._id);
+      }
+
+      if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+          await saveNodes(child);
+        }
+      }
+
+      return savedNode;
+    };
+
+    if (tree) {
+      await saveNodes(tree);
+    }
+
+    if (title) {
+      mindMap.title = title;
+    }
+
+    // Update edit history
+    if (!mindMap.metadata) {
+      mindMap.metadata = {};
+    }
+    if (!mindMap.metadata.editHistory) {
+      mindMap.metadata.editHistory = [];
+    }
+
+    mindMap.metadata.editHistory.push({
+      action: 'saved',
+      user: userId,
+      timestamp: new Date()
+    });
+    mindMap.metadata.lastEditedBy = userId;
+
+    await mindMap.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Mind map state saved successfully',
+      data: mindMap
+    });
+  } catch (error) {
+    console.error('Save mind map state error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to save mind map state'
+    });
+  }
+};
+
+// Get recent mind maps
+export const getRecentMindMaps = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const limit = req.query.limit || 5;
+
+    const mindMaps = await MindMap.find({ owner: userId })
+      .sort({ updatedAt: -1 })
+      .limit(parseInt(limit))
+      .populate('owner', 'name email')
+      .populate('rootNode');
+
+    res.status(200).json({
+      success: true,
+      data: mindMaps
+    });
+  } catch (error) {
+    console.error('Get recent mind maps error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to fetch recent mind maps'
+    });
+  }
+};
+
+// ==================== AI GENERATION OPERATIONS ====================
 
 export const generateNodes = async (req, res, next) => {
   try {

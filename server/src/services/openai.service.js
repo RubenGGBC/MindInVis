@@ -22,15 +22,32 @@ class OpenAIService {
 
   async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null) {
     try {
-      console.log(`Generating ${count} nodes for "${nodeText}" (type: ${nodeTipo})`);
-      
+      console.log('\n' + '═'.repeat(80));
+      console.log('🎯 GENERATE NODES - Entry Point');
+      console.log('═'.repeat(80));
+      console.log(`📝 Input:`);
+      console.log(`  • Node Text: "${nodeText}"`);
+      console.log(`  • Node Type: ${nodeTipo}`);
+      console.log(`  • Count: ${count}`);
+
       if (nodeContextData) {
-        console.log('With node context:', {
-          level: nodeContextData.pathLength,
-          firstQuestion: nodeContextData.firstQuestion
-        });
+        console.log('\n🔍 FULL TRACE CONTEXT:');
+        console.log(`  • Path Length: ${nodeContextData.pathLength}`);
+        console.log(`  • Full Trace Path:`);
+        if (nodeContextData.fullPath && nodeContextData.fullPath.length > 0) {
+          nodeContextData.fullPath.forEach((node, index) => {
+            console.log(`    [L${index + 1}] ${node}`);
+          });
+        }
+        console.log(`\n  • Root Question (L1): "${nodeContextData.firstQuestion}"`);
+        console.log(`  • Previous Question (L${nodeContextData.pathLength - 1}): "${nodeContextData.previousQuestion}"`);
+        console.log(`  • Current Answer (L${nodeContextData.pathLength}): "${nodeContextData.currentAnswer}"`);
+        console.log(`  • Current Answer Note: "${nodeContextData.currentAnswerNote?.substring(0, 100)}..."`);
+      } else {
+        console.log('\n⚠️  No context data provided (basic generation)');
       }
 
+      console.log('\n→ Calling generateNodesWithPromptBuilder...');
       // Siempre usar generación estructurada con PromptBuilder para obtener descripciones
       return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData);
     } catch (error) {
@@ -47,7 +64,7 @@ class OpenAIService {
       console.log('═'.repeat(80));
       console.log(`Input Parameters:`);
       console.log(`  • Text: "${nodeText}"`);
-      console.log(`  • Type: ${nodeTipo}`);
+      console.log(`  • Parent Type: ${nodeTipo}`);
       console.log(`  • Count: ${count}`);
       console.log(`  • Description: "${description}"`);
 
@@ -61,33 +78,54 @@ class OpenAIService {
       let promptType = 'basic';
       let options = {};
 
-      // Si hay contexto, significa que es una respuesta generada por una pregunta
-      // Las respuestas generadas por preguntas USAN CONTEXTO
-      if (nodeContextData && nodeTipo === 'respuesta' && nodeContextData.pathLength >= 2) {
-        promptType = 'suggested-llm';
-        options = {
-          answerLabel: nodeContextData.currentAnswer,
-          answerNote: nodeContextData.currentAnswerNote,
-          previousQuestion: nodeContextData.previousQuestion,
-          firstQuestion: nodeContextData.firstQuestion,
-          fullPath: nodeContextData.fullPath
-        };
-        
-        console.log(`\n✨ CONTEXT DETECTED - Using enhanced prompt`);
-        console.log(`Context Path Length: ${nodeContextData.pathLength}`);
-        console.log(`Full Ancestry: ${nodeContextData.fullPath?.join(' → ') || 'N/A'}`);
-        console.log(`  • Root (L1):     "${nodeContextData.firstQuestion}"`);
-        console.log(`  • Parent (L${nodeContextData.pathLength - 1}):     "${nodeContextData.previousQuestion}"`);
-        console.log(`  • Current (L${nodeContextData.pathLength}):   "${nodeContextData.currentAnswer}"`);
-        console.log(`  • Prompt Type:   ${promptType} ← SWITCHED FROM 'basic'`);
-      } else {
-        console.log(`\n⚠️  NO CONTEXT - Using basic prompt`);
-        if (nodeContextData) {
-          console.log(`  Reason: pathLength=${nodeContextData?.pathLength || 'N/A'}, type=${nodeTipo}`);
+      console.log('\n🔄 Determining Generation Strategy:');
+      console.log(`  • Parent Type: ${nodeTipo}`);
+
+      // LÓGICA CORRECTA DEL FLUJO:
+      // 1. PREGUNTA → Genera RESPUESTAS (sin contexto, respuestas directas)
+      // 2. RESPUESTA → Genera PREGUNTAS (con contexto completo para preguntas inteligentes)
+
+      if (nodeTipo === 'pregunta') {
+        // PREGUNTA → RESPUESTAS (sin contexto, respuestas básicas)
+        console.log(`  → Generating ANSWERS from a QUESTION`);
+        console.log(`  → Using basic prompt (no context needed for answers)`);
+        promptType = 'basic';
+
+      } else if (nodeTipo === 'respuesta') {
+        // RESPUESTA → PREGUNTAS (con contexto si disponible)
+        console.log(`  → Generating QUESTIONS from an ANSWER`);
+
+        if (nodeContextData && nodeContextData.pathLength >= 1) {
+          // Tenemos contexto: usar contexto completo para generar preguntas de seguimiento inteligentes
+          promptType = 'suggested-llm';
+          options = {
+            answerLabel: nodeContextData.currentAnswer,
+            answerNote: nodeContextData.currentAnswerNote,
+            previousQuestion: nodeContextData.previousQuestion,
+            firstQuestion: nodeContextData.firstQuestion,
+            fullPath: nodeContextData.fullPath
+          };
+
+          console.log(`\n✨ CONTEXTUAL QUESTIONS - Using enhanced prompt with trace`);
+          console.log(`  • Context Path Length: ${nodeContextData.pathLength}`);
+          console.log(`  • Full Trace: ${nodeContextData.fullPath?.join(' → ') || 'N/A'}`);
+          console.log(`  • Root Question (L1): "${nodeContextData.firstQuestion}"`);
+          console.log(`  • Previous Question (L${nodeContextData.pathLength - 1}): "${nodeContextData.previousQuestion}"`);
+          console.log(`  • Current Answer (L${nodeContextData.pathLength}): "${nodeContextData.currentAnswer}"`);
+          console.log(`  • Prompt Type: ${promptType} ← CONTEXTUAL QUESTIONS`);
+        } else {
+          // Sin contexto: preguntas básicas exploratorias
+          console.log(`  → No context available, using basic exploratory questions`);
+          promptType = 'basic';
         }
+      } else {
+        console.log(`  ⚠️  Unknown type: ${nodeTipo}, using basic`);
+        promptType = 'basic';
       }
 
-      console.log('\nCalling generateStructuredNodes...');
+      console.log(`\n📤 Final Prompt Type: ${promptType}`);
+      console.log('Calling generateStructuredNodes...');
+
       let result;
       try {
         result = await this.generateStructuredNodes(nodeContext, question, promptType, options);

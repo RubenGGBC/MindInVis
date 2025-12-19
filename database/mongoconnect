@@ -1,4 +1,9 @@
+// MongoDB Connection Configuration
+// URL: mongodb://localhost:1437/mindinvis
 
-mongoose.connect('URL_DE_LA_CONEXION', {
-	useNewUrlParser: true
+import mongoose from 'mongoose';
+
+mongoose.connect('mongodb://localhost:1437/mindinvis', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
 });
