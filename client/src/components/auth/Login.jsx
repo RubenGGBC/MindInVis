@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
-const Login = ({ onSwitchToRegister, onLogin }) => {
+const Login = ({ onSwitchToRegister }) => {
+  const { login } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -62,11 +64,17 @@ const Login = ({ onSwitchToRegister, onLogin }) => {
 
     setIsSubmitting(true);
 
-    setTimeout(() => {
+    try {
+      const result = await login(formData.email, formData.password);
+      
+      if (!result.success) {
+        setErrors({ general: result.error || 'Invalid credentials' });
+      }
+    } catch (error) {
+      setErrors({ general: 'An error occurred during login' });
+    } finally {
       setIsSubmitting(false);
-      const name = formData.email.split('@')[0];
-      onLogin(name.charAt(0).toUpperCase() + name.slice(1));
-    }, 500);
+    }
   };
 
   return (

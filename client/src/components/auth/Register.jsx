@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import './Auth.css';
 
-const Register = ({ onSwitchToLogin, onLogin }) => {
+const Register = ({ onSwitchToLogin }) => {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -102,12 +104,22 @@ const Register = ({ onSwitchToLogin, onLogin }) => {
 
     setIsSubmitting(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const result = await register(
+        formData.email,
+        formData.name,
+        formData.password,
+        formData.confirmPassword
+      );
+      
+      if (!result.success) {
+        setErrors({ general: result.error || 'Registration failed' });
+      }
+    } catch (error) {
+      setErrors({ general: 'An error occurred during registration' });
+    } finally {
       setIsSubmitting(false);
-      // Call onLogin with the name
-      onLogin(formData.name);
-    }, 500);
+    }
   };
 
   const getStrengthColor = () => {
