@@ -54,15 +54,7 @@ const Sidebar = () => {
         ))}
       </div>
 
-      <div className="sidebar-footer">
-        <button className="upgrade-btn">
-          <Sparkles size={18} />
-          <div className="upgrade-text">
-            <span className="upgrade-title">Upgrade Pro</span>
-            <span className="upgrade-subtitle">Unlock everything</span>
-          </div>
-        </button>
-      </div>
+      
     </aside>
   );
 };

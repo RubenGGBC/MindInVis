@@ -25,7 +25,7 @@ export const mapService = {
   getAllMaps: async () => {
     try {
       const response = await api.get('/mindmap');
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching maps:', error);
       throw error;
@@ -36,7 +36,7 @@ export const mapService = {
   getRecentMaps: async () => {
     try {
       const response = await api.get('/mindmap/recent');
-      return response.data;
+      return response.data.data || [];
     } catch (error) {
       console.error('Error fetching recent maps:', error);
       throw error;
@@ -47,7 +47,7 @@ export const mapService = {
   getMapById: async (id) => {
     try {
       const response = await api.get(`/mindmap/${id}`);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Error fetching map:', error);
       throw error;
@@ -58,9 +58,11 @@ export const mapService = {
   createMap: async (mapData) => {
     try {
       const response = await api.post('/mindmap', mapData);
-      return response.data;
+      console.log('Create map response:', response.data);
+      return response.data.data || response.data;
     } catch (error) {
       console.error('Error creating map:', error);
+      console.error('Error response:', error.response?.data);
       throw error;
     }
   },
@@ -69,7 +71,7 @@ export const mapService = {
   updateMap: async (id, mapData) => {
     try {
       const response = await api.put(`/mindmap/${id}`, mapData);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Error updating map:', error);
       throw error;
@@ -91,7 +93,7 @@ export const mapService = {
   saveMindMapState: async (id, state) => {
     try {
       const response = await api.post(`/mindmap/${id}/save`, state);
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Error saving map state:', error);
       throw error;
@@ -102,7 +104,7 @@ export const mapService = {
   toggleStar: async (id, isStarred) => {
     try {
       const response = await api.put(`/mindmap/${id}`, { isStarred });
-      return response.data;
+      return response.data.data;
     } catch (error) {
       console.error('Error toggling star:', error);
       throw error;

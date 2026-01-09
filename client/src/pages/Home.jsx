@@ -321,39 +321,7 @@ const Home = ({ userName }) => {
           </motion.section>
 
           {/* Features Grid */}
-          <motion.section
-            className="features-section"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-100px" }}
-            variants={containerVariants}
-          >
-            <motion.h2 className="section-title" variants={itemVariants}>
-              Everything you need
-            </motion.h2>
-            <div className="features-grid">
-              {features.map((feature, index) => {
-                const Icon = feature.icon;
-                return (
-                  <motion.div
-                    key={index}
-                    className="feature-card"
-                    variants={itemVariants}
-                    whileHover={{
-                      scale: 1.05,
-                      boxShadow: '0 8px 30px rgba(76, 201, 240, 0.2)'
-                    }}
-                  >
-                    <div className="feature-icon">
-                      <Icon size={28} />
-                    </div>
-                    <h3 className="feature-title">{feature.title}</h3>
-                    <p className="feature-description">{feature.description}</p>
-                  </motion.div>
-                );
-              })}
-            </div>
-          </motion.section>
+          
 
           {/* Create New Maps Section */}
           <motion.div

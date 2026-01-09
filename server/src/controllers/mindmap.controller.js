@@ -299,6 +299,9 @@ export const saveMindMapState = async (req, res) => {
 
     if (tree) {
       await saveNodes(tree);
+      // Also save the tree structure for easy reconstruction
+      console.log('💾 Saving tree structure to database');
+      mindMap.treeStructure = tree;
     }
 
     if (title) {
@@ -342,11 +345,18 @@ export const getRecentMindMaps = async (req, res) => {
     const userId = req.user.id;
     const limit = req.query.limit || 5;
 
+    console.log(`\n📊 GET /api/mindmap/recent - User: ${userId}`);
+
     const mindMaps = await MindMap.find({ owner: userId })
       .sort({ updatedAt: -1 })
       .limit(parseInt(limit))
       .populate('owner', 'name email')
       .populate('rootNode');
+
+    console.log(`✅ Found ${mindMaps.length} recent maps for user ${userId}`);
+    mindMaps.forEach((map, idx) => {
+      console.log(`  ${idx + 1}. ${map.title} (${map._id}) - Updated: ${map.updatedAt}`);
+    });
 
     res.status(200).json({
       success: true,

@@ -1,6 +1,7 @@
 import { useState, useReducer, useEffect, useMemo, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Sparkles, Save, Share2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import ReactFlow, {
   Controls,
   Background,
@@ -15,6 +16,7 @@ import './Editor.css';
 import Toolbar from '../components/editor/Toolbar';
 import MindMapNode from '../models/MindMapNode';
 import IAService from '../services/IAServices';
+import { mapService } from '../services/mapService';
 import { editorReducer, getInitialState, actionCreators } from '../reducers/editorReducer';
 import { findNodeById, calculateChildrenPositions, findParentNode, getNodePath } from '../utils/nodeUtils';
 import ReactFlowNode from '../components/editor/ReactFlowNode';
@@ -93,6 +95,8 @@ function getChildTipo(parentTipo) {
 
 const Editor = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const mapId = location.state?.mapId;
 
   // Estado del editor con reducer
   const initialRootNode = useMemo(() =>
@@ -119,6 +123,120 @@ const Editor = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
 
   const iaService = useMemo(() => new IAService(), []);
+
+  // Load map from database if mapId exists
+  useEffect(() => {
+    const loadMap = async () => {
+      if (!mapId) {
+        console.log('No mapId provided, starting with blank map');
+        return;
+      }
+
+      try {
+        console.log('📂 Loading map with ID:', mapId);
+        toast.loading('Loading map...', { id: 'load-map' });
+
+        const mapData = await mapService.getMapById(mapId);
+        console.log('📊 Map data received:', mapData);
+
+        if (mapData.title) {
+          setMapName(mapData.title);
+        }
+
+        // Check if we have a saved tree structure
+        if (mapData.treeStructure) {
+          console.log('🌳 Loading tree structure from database');
+
+          // Recursively reconstruct MindMapNode objects from the saved tree
+          const reconstructTree = (nodeData) => {
+            if (!nodeData) return null;
+
+            const node = new MindMapNode(
+              nodeData.id,
+              nodeData.text,
+              nodeData.x || 200,
+              nodeData.y || 400,
+              nodeData.type || 'pregunta'
+            );
+
+            // Copy all properties
+            node.width = nodeData.width || 200;
+            node.height = nodeData.height || 80;
+            node.fontSize = nodeData.fontSize || 16;
+            node.backgroundColor = nodeData.backgroundColor || '#ffffff';
+            node.borderColor = nodeData.borderColor || '#8b5cf6';
+            node.borderWidth = nodeData.borderWidth || 2;
+            node.description = nodeData.description || '';
+            node.source = nodeData.source || '';
+            node.collapsed = nodeData.collapsed || false;
+            node.hasGeneratedChildren = nodeData.hasGeneratedChildren || false;
+
+            // Recursively reconstruct children
+            if (nodeData.children && Array.isArray(nodeData.children)) {
+              node.children = nodeData.children.map(child => reconstructTree(child));
+            } else {
+              node.children = [];
+            }
+
+            return node;
+          };
+
+          const reconstructedTree = reconstructTree(mapData.treeStructure);
+
+          if (reconstructedTree) {
+            console.log('✅ Tree reconstructed successfully');
+            dispatch(actionCreators.setTree(reconstructedTree));
+            toast.success('Map loaded successfully!', { id: 'load-map' });
+          } else {
+            console.error('❌ Failed to reconstruct tree');
+            toast.error('Failed to load map structure', { id: 'load-map' });
+          }
+        } else if (mapData.nodes && Array.isArray(mapData.nodes) && mapData.nodes.length > 0) {
+          // Fallback: Load only root node if no tree structure is saved
+          console.log('⚠️ No tree structure found, loading root node only');
+
+          const rootNodeData = mapData.nodes.find(n => n.type === 'root' || n.type === 'pregunta');
+
+          if (rootNodeData) {
+            const rootNode = new MindMapNode(
+              rootNodeData.id,
+              rootNodeData.text,
+              rootNodeData.x || 200,
+              rootNodeData.y || 400,
+              rootNodeData.type || 'pregunta'
+            );
+
+            // Copy properties
+            rootNode.width = rootNodeData.width || 200;
+            rootNode.height = rootNodeData.height || 80;
+            rootNode.fontSize = rootNodeData.fontSize || 16;
+            rootNode.backgroundColor = rootNodeData.backgroundColor || '#ffffff';
+            rootNode.borderColor = rootNodeData.borderColor || '#8b5cf6';
+            rootNode.borderWidth = rootNodeData.borderWidth || 2;
+            rootNode.description = rootNodeData.description || '';
+            rootNode.source = rootNodeData.source || '';
+            rootNode.collapsed = rootNodeData.collapsed || false;
+            rootNode.hasGeneratedChildren = rootNodeData.hasGeneratedChildren || false;
+            rootNode.children = [];
+
+            dispatch(actionCreators.setTree(rootNode));
+            toast.success('Map loaded (root only)', { id: 'load-map' });
+          } else {
+            console.warn('⚠️ No root node found in map data');
+            toast.error('Invalid map structure', { id: 'load-map' });
+          }
+        } else {
+          console.log('ℹ️ Map has no nodes, starting fresh');
+          toast.success('Map loaded (empty)', { id: 'load-map' });
+        }
+      } catch (error) {
+        console.error('❌ Error loading map:', error);
+        toast.error('Failed to load map', { id: 'load-map' });
+      }
+    };
+
+    loadMap();
+  }, [mapId, dispatch]);
 
   // Detectar tecla Espacio para modo pan
   useEffect(() => {
@@ -435,6 +553,28 @@ const Editor = () => {
     // React Flow's controls handle this
   };
 
+  // Función para guardar el mapa
+  const handleSave = useCallback(async () => {
+    if (!mapId) {
+      toast.error('No map ID found. Cannot save.');
+      return;
+    }
+
+    try {
+      toast.loading('Saving map...', { id: 'save-map' });
+
+      await mapService.saveMindMapState(mapId, {
+        tree: state.tree,
+        title: mapName
+      });
+
+      toast.success('Map saved successfully!', { id: 'save-map' });
+    } catch (error) {
+      console.error('Error saving map:', error);
+      toast.error('Failed to save map. Please try again.', { id: 'save-map' });
+    }
+  }, [mapId, state.tree, mapName]);
+
   return (
     <div className="editor-container">
       {/* Header */}
@@ -452,7 +592,7 @@ const Editor = () => {
         </div>
 
         <div className="editor-header-right">
-          <button className="editor-btn secondary">
+          <button className="editor-btn secondary" onClick={handleSave}>
             <Save size={18} />
             Save
           </button>

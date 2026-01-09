@@ -17,16 +17,24 @@ export const MapDataProvider = ({ children }) => {
   // Fetch recent maps
   const { data: recentMapsData = [], isLoading: isLoadingRecent } = useQuery({
     queryKey: ['recentMaps'],
-    queryFn: mapService.getRecentMaps,
+    queryFn: async () => {
+      console.log('🔄 Fetching recent maps...');
+      const result = await mapService.getRecentMaps();
+      console.log('📊 Recent maps response:', result);
+      return result;
+    },
     staleTime: 1000 * 60 * 2, // 2 minutes
   });
 
   // Create map mutation
   const createMapMutation = useMutation({
     mutationFn: mapService.createMap,
-    onSuccess: () => {
-      queryClient.invalidateQueries(['maps']);
-      queryClient.invalidateQueries(['recentMaps']);
+    onSuccess: async (data) => {
+      console.log('✅ Map created successfully:', data);
+      console.log('🔄 Invalidating and refetching queries...');
+      await queryClient.invalidateQueries({ queryKey: ['maps'], refetchType: 'active' });
+      await queryClient.invalidateQueries({ queryKey: ['recentMaps'], refetchType: 'active' });
+      console.log('✅ Queries invalidated and refetched');
     },
   });
 
@@ -91,21 +99,6 @@ export const MapDataProvider = ({ children }) => {
     { icon: 'Lightbulb', label: 'Ideas', color: 'orange' },
   ], []);
 
-  // Format recent maps for display
-  const recentMaps = useMemo(() => {
-    return recentMapsData.map((map) => ({
-      id: map._id,
-      name: map.title,
-      category: map.category,
-      nodes: map.nodeCount || 0,
-      createdBy: map.owner?.name || 'Unknown',
-      modified: formatRelativeTime(map.updatedAt),
-      starred: map.isStarred || false,
-      aiGenerated: map.aiGenerated || false,
-      color: map.color || 'cyan',
-    }));
-  }, [recentMapsData]);
-
   // Helper function to format relative time
   const formatRelativeTime = (dateString) => {
     const date = new Date(dateString);
@@ -126,6 +119,42 @@ export const MapDataProvider = ({ children }) => {
     });
   };
 
+  // Format recent maps for display
+  const recentMaps = useMemo(() => {
+    console.log('🔄 Transforming recent maps data...');
+    console.log('Raw recentMapsData:', recentMapsData);
+
+    if (!Array.isArray(recentMapsData)) {
+      console.warn('⚠️ recentMapsData is not an array:', recentMapsData);
+      return [];
+    }
+
+    const transformed = recentMapsData.map((map) => {
+      console.log('Processing map:', {
+        _id: map._id,
+        title: map.title,
+        nodes: map.nodes,
+        owner: map.owner,
+        updatedAt: map.updatedAt
+      });
+
+      return {
+        id: map._id || map.id,
+        name: map.title || 'Untitled',
+        category: map.category || 'Other',
+        nodes: Array.isArray(map.nodes) ? map.nodes.length : 0,
+        createdBy: map.owner?.name || map.owner?.email || 'Unknown',
+        modified: map.updatedAt ? formatRelativeTime(map.updatedAt) : 'Unknown',
+        starred: map.isStarred || false,
+        aiGenerated: map.aiGenerated || false,
+        color: map.color || 'cyan',
+      };
+    });
+
+    console.log('✅ Transformed recent maps:', transformed);
+    return transformed;
+  }, [recentMapsData]);
+
   const value = {
     // Data
     quickActions,
@@ -137,11 +166,11 @@ export const MapDataProvider = ({ children }) => {
     isLoadingAllMaps,
     isLoadingRecent,
 
-    // Mutations
-    createMap: createMapMutation.mutate,
-    updateMap: updateMapMutation.mutate,
-    deleteMap: deleteMapMutation.mutate,
-    toggleStar: toggleStarMutation.mutate,
+    // Mutations (using mutateAsync to return promises with results)
+    createMap: createMapMutation.mutateAsync,
+    updateMap: updateMapMutation.mutateAsync,
+    deleteMap: deleteMapMutation.mutateAsync,
+    toggleStar: toggleStarMutation.mutateAsync,
 
     // Loading states for mutations
     isCreating: createMapMutation.isPending,

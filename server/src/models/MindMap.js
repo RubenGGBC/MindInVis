@@ -28,6 +28,10 @@ const mindMapSchema = new mongoose.Schema(
         ref: 'MindMapNode'
       }
     ],
+    treeStructure: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
     category: {
       type: String,
       enum: ['Learning', 'Work', 'Business', 'Personal', 'Other'],

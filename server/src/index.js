@@ -8,10 +8,10 @@ import morgan from 'morgan';
 dotenv.config();
 
 // Validate required environment variables
-if (!process.env.OPENAI_API_KEY) {
-  console.error('ERROR: OPENAI_API_KEY is not set in environment variables');
-  console.error('Please create a .env file in the server directory with your OpenAI API key');
-  process.exit(1);
+if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu-key-aqui') {
+  console.warn('WARNING: OPENAI_API_KEY is not configured properly');
+  console.warn('AI generation features will not work until you add a valid API key');
+  console.warn('The server will continue to run, but AI endpoints will return errors');
 }
 
 // Import database connection

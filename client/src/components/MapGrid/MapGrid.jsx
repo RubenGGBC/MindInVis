@@ -40,8 +40,17 @@ const MapGrid = () => {
         title: 'Untitled map',
         category: 'Other',
       });
+
+      console.log('New map created:', newMap);
+
+      const mapId = newMap?._id || newMap?.id;
+      if (!mapId) {
+        console.error('Map data:', newMap);
+        throw new Error('Invalid response from server: missing map ID');
+      }
+
       toast.success('Map created successfully!', { id: 'create-map' });
-      navigate('/editor', { state: { mapId: newMap._id } });
+      navigate('/editor', { state: { mapId } });
     } catch (error) {
       toast.error('Failed to create map. Please try again.', { id: 'create-map' });
       console.error('Error creating map:', error);
@@ -56,8 +65,17 @@ const MapGrid = () => {
         title: `${templateName} Map`,
         category: templateName === 'Project' ? 'Work' : 'Other',
       });
+
+      console.log('New map created:', newMap);
+
+      const mapId = newMap?._id || newMap?.id;
+      if (!mapId) {
+        console.error('Map data:', newMap);
+        throw new Error('Invalid response from server: missing map ID');
+      }
+
       toast.success('Map created successfully!', { id: 'create-map' });
-      navigate('/editor', { state: { mapId: newMap._id } });
+      navigate('/editor', { state: { mapId } });
     } catch (error) {
       toast.error('Failed to create map. Please try again.', { id: 'create-map' });
       console.error('Error creating map:', error);
