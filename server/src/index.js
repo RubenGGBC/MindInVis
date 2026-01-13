@@ -20,12 +20,13 @@ import connectDB from './config/database.js';
 // Import routes (AFTER dotenv.config())
 import mindmapRoutes from './routes/mindmap.routes.js';
 import authRoutes from './routes/auth.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet()); // Security headers
@@ -49,6 +50,10 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/mindmap', mindmapRoutes);
+app.use('/api/upload', uploadRoutes);
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static('uploads'));
 
 // 404 handler
 app.use((req, res) => {

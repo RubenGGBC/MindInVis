@@ -34,6 +34,8 @@ const treeToFlow = (
   onNodeClick,
   onAddChild,
   onToggleCollapse,
+  onSummarize,
+  onStyleChange,
   onTextChange,
   onSubmit,
   isLoading,
@@ -58,6 +60,8 @@ const treeToFlow = (
         onNodeClick,
         onAddChild,
         onToggleCollapse,
+        onSummarize,
+        onStyleChange,
         selected: node.id === selectedNodeId,
       },
     });
@@ -165,8 +169,9 @@ const Editor = () => {
             node.width = nodeData.width || 200;
             node.height = nodeData.height || 80;
             node.fontSize = nodeData.fontSize || 16;
-            node.backgroundColor = nodeData.backgroundColor || '#ffffff';
-            node.borderColor = nodeData.borderColor || '#8b5cf6';
+            // Preserve constructor defaults when server data omits colors
+            node.backgroundColor = nodeData.backgroundColor || node.backgroundColor;
+            node.borderColor = nodeData.borderColor || node.borderColor;
             node.borderWidth = nodeData.borderWidth || 2;
             node.description = nodeData.description || '';
             node.source = nodeData.source || '';
@@ -212,8 +217,9 @@ const Editor = () => {
             rootNode.width = rootNodeData.width || 200;
             rootNode.height = rootNodeData.height || 80;
             rootNode.fontSize = rootNodeData.fontSize || 16;
-            rootNode.backgroundColor = rootNodeData.backgroundColor || '#ffffff';
-            rootNode.borderColor = rootNodeData.borderColor || '#8b5cf6';
+            // Preserve constructor defaults when server data omits colors
+            rootNode.backgroundColor = rootNodeData.backgroundColor || rootNode.backgroundColor;
+            rootNode.borderColor = rootNodeData.borderColor || rootNode.borderColor;
             rootNode.borderWidth = rootNodeData.borderWidth || 2;
             rootNode.description = rootNodeData.description || '';
             rootNode.source = rootNodeData.source || '';
@@ -308,6 +314,14 @@ const Editor = () => {
     dispatch(actionCreators.updateNodeProperty(selectedNodeId, property, value));
   }, [selectedNodeId]);
 
+  // Actualizar múltiples estilos del nodo
+  const handleStyleChange = useCallback((node, styles) => {
+    if (!node || !node.id) return;
+    Object.entries(styles).forEach(([property, value]) => {
+      dispatch(actionCreators.updateNodeProperty(node.id, property, value));
+    });
+  }, [dispatch]);
+
   const handleCanvasClick = useCallback(() => {
     setEditingNodeId(null);
     setSelectedNodeId(null);
@@ -368,6 +382,99 @@ const Editor = () => {
   const handleToggleCollapse = useCallback((node) => {
     dispatch(actionCreators.toggleCollapse(node.id));
   }, []);
+
+  // Compactar/resumir nodos hijos
+  const handleSummarize = useCallback(async (parentNode, targetCount) => {
+    if (!parentNode || !parentNode.children || parentNode.children.length <= 1) {
+      toast.error('El nodo debe tener al menos 2 hijos para compactar');
+      return;
+    }
+
+    if (targetCount < 2) {
+      toast.error('Debes crear al menos 2 clusters');
+      return;
+    }
+
+    if (targetCount >= parentNode.children.length) {
+      toast.error('El número objetivo debe ser menor que el número de hijos actuales');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      toast.loading(`🤖 Analizando ${parentNode.children.length} nodos con IA...`, { id: 'summarize' });
+
+      // Preparar los nodos para la API
+      const nodesToAggregate = parentNode.children.map(child => ({
+        text: child.text,
+        description: child.description || '',
+        title: child.text
+      }));
+
+      toast.loading(`🔄 Compactando en ${targetCount} clusters...`, { id: 'summarize' });
+
+      // Llamar a la API de agregación
+      const clusters = await iaService.aggregateNodes(
+        parentNode.text,
+        nodesToAggregate,
+        targetCount
+      );
+
+      console.log('Clusters received:', clusters);
+
+      toast.loading('✨ Creando nuevos nodos...', { id: 'summarize' });
+
+      // Calcular posiciones para los nuevos nodos
+      const positions = calculateChildrenPositions(parentNode, clusters.length, state.tree);
+
+      // Determinar el tipo de los hijos
+      const childType = getChildTipo(parentNode.tipo);
+
+      // Crear nuevos nodos a partir de los clusters
+      const newChildren = clusters.map((cluster, index) => {
+        const position = positions[index];
+        const clusterText = cluster.cluster_name || `Cluster ${index + 1}`;
+        const clusterDescription = cluster.description || '';
+
+        // Crear descripción extendida que incluya los items agrupados
+        const itemsList = cluster.clusteredItems?.map(item =>
+          typeof item === 'string' ? item : (item.text || item.title || '')
+        ).filter(Boolean).join(', ') || '';
+
+        const fullDescription = itemsList
+          ? `${clusterDescription}\n\nIncluye: ${itemsList}`
+          : clusterDescription;
+
+        const childNode = new MindMapNode(
+          `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+          clusterText,
+          position.x,
+          position.y,
+          childType,
+          fullDescription,
+          'IA - Compactación'
+        );
+        return childNode;
+      });
+
+      // Reemplazar los hijos del nodo padre
+      dispatch(actionCreators.replaceChildren(parentNode.id, newChildren));
+
+      toast.success(`✅ ¡Compactación exitosa! ${parentNode.children.length} → ${targetCount} nodos`, {
+        id: 'summarize',
+        duration: 4000
+      });
+    } catch (error) {
+      console.error('Error al compactar nodos:', error);
+      const errorMessage = error.response?.data?.message || error.message || 'Error desconocido';
+      toast.error(`❌ Error al compactar: ${errorMessage}`, {
+        id: 'summarize',
+        duration: 5000
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [iaService, dispatch, state.tree]);
 
   // Reorganizar todos los nodos a sus posiciones iniciales
   const handleReorganize = () => {
@@ -504,14 +611,16 @@ const Editor = () => {
         handleNodeClick,
         handleAddChildToNode,
         handleToggleCollapse,
+        handleSummarize,
+        handleStyleChange,
         handleTextChange,
         handleSubmit,
         isLoading,
-        selectedNodeId // New parameter
+        selectedNodeId
     );
     setNodes(nodes);
     setEdges(edges);
-  }, [state.tree, editingNodeId, editingText, isLoading, setNodes, setEdges, handleNodeDoubleClick, handleNodeClick, handleAddChildToNode, handleToggleCollapse, handleTextChange, handleSubmit, selectedNodeId]);
+  }, [state.tree, editingNodeId, editingText, isLoading, setNodes, setEdges, handleNodeDoubleClick, handleNodeClick, handleAddChildToNode, handleToggleCollapse, handleSummarize, handleStyleChange, handleTextChange, handleSubmit, selectedNodeId]);
 
   const handleNodeDragStop = useCallback((event, draggedNode) => {
     const targetNode = nodes.find(

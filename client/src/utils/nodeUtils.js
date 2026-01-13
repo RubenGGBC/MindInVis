@@ -1,12 +1,12 @@
 /**
- * Utilidades para trabajar con árboles de nodos de forma inmutable
+ * Utilities for working with node trees in an immutable way
  */
 
 /**
- * Encuentra un nodo por su ID en el árbol
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} nodeId - ID del nodo a buscar
- * @returns {Object|null} - El nodo encontrado o null
+ * Finds a node by its ID in the tree
+ * @param {Object} tree - Root node of the tree
+ * @param {string} nodeId - ID of the node to find
+ * @returns {Object|null} - The found node or null
  */
 export function findNodeById(tree, nodeId) {
   if (!tree) return null;
@@ -23,11 +23,11 @@ export function findNodeById(tree, nodeId) {
 }
 
 /**
- * Actualiza un nodo específico en el árbol de forma inmutable
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} nodeId - ID del nodo a actualizar
- * @param {Function} updateFn - Función que recibe el nodo y devuelve las propiedades actualizadas
- * @returns {Object} - Nuevo árbol con el nodo actualizado
+ * Updates a specific node in the tree immutably
+ * @param {Object} tree - Root node of the tree
+ * @param {string} nodeId - ID of the node to update
+ * @param {Function} updateFn - Function that receives the node and returns updated properties
+ * @returns {Object} - New tree with the updated node
  */
 export function updateNode(tree, nodeId, updateFn) {
   if (!tree) return tree;
@@ -46,7 +46,7 @@ export function updateNode(tree, nodeId, updateFn) {
       updateNode(child, nodeId, updateFn)
     );
 
-    // Solo crear nuevo objeto si algún hijo cambió
+    // Only create a new object if a child changed
     const hasChanged = newChildren.some((child, idx) => child !== tree.children[idx]);
     if (hasChanged) {
       return {
@@ -60,11 +60,11 @@ export function updateNode(tree, nodeId, updateFn) {
 }
 
 /**
- * Añade un nodo hijo a un nodo específico
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} parentId - ID del nodo padre
- * @param {Object} newChild - Nuevo nodo hijo a añadir
- * @returns {Object} - Nuevo árbol con el hijo añadido
+ * Adds a child node to a specific node
+ * @param {Object} tree - Root node of the tree
+ * @param {string} parentId - ID of the parent node
+ * @param {Object} newChild - New child node to add
+ * @returns {Object} - New tree with the child added
  */
 export function addChildToNode(tree, parentId, newChild) {
   if (!tree) return tree;
@@ -95,10 +95,10 @@ export function addChildToNode(tree, parentId, newChild) {
 }
 
 /**
- * Elimina un nodo del árbol
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} nodeId - ID del nodo a eliminar
- * @returns {Object|null} - Nuevo árbol sin el nodo (null si se eliminó la raíz)
+ * Deletes a node from the tree
+ * @param {Object} tree - Root node of the tree
+ * @param {string} nodeId - ID of the node to delete
+ * @returns {Object|null} - New tree without the node (null if root was deleted)
  */
 export function deleteNode(tree, nodeId) {
   if (!tree) return null;
@@ -130,9 +130,9 @@ export function deleteNode(tree, nodeId) {
 }
 
 /**
- * Cuenta el número total de nodos en el árbol
- * @param {Object} tree - Nodo raíz del árbol
- * @returns {number} - Número total de nodos
+ * Counts the total number of nodes in the tree
+ * @param {Object} tree - Root node of the tree
+ * @returns {number} - Total number of nodes
  */
 export function countNodes(tree) {
   if (!tree) return 0;
@@ -147,9 +147,9 @@ export function countNodes(tree) {
 }
 
 /**
- * Obtiene la profundidad máxima del árbol
- * @param {Object} tree - Nodo raíz del árbol
- * @returns {number} - Profundidad máxima
+ * Gets the maximum depth of the tree
+ * @param {Object} tree - Root node of the tree
+ * @returns {number} - Maximum depth
  */
 export function getMaxDepth(tree) {
   if (!tree) return 0;
@@ -163,8 +163,8 @@ export function getMaxDepth(tree) {
 }
 
 /**
- * Valida que un árbol de nodos sea correcto
- * @param {Object} tree - Nodo raíz del árbol
+ * Validates that a node tree is correct
+ * @param {Object} tree - Root node of the tree
  * @returns {Object} - { valid: boolean, errors: string[] }
  */
 export function validateNodeTree(tree) {
@@ -210,9 +210,9 @@ export function validateNodeTree(tree) {
 }
 
 /**
- * Clona profundamente un árbol de nodos de forma inmutable
- * @param {Object} tree - Nodo raíz del árbol
- * @returns {Object} - Nuevo árbol clonado
+ * Deep-clones a node tree immutably
+ * @param {Object} tree - Root node of the tree
+ * @returns {Object} - New cloned tree
  */
 export function cloneTree(tree) {
   if (!tree) return null;
@@ -224,9 +224,9 @@ export function cloneTree(tree) {
 }
 
 /**
- * Recorre el árbol y ejecuta una función en cada nodo
- * @param {Object} tree - Nodo raíz del árbol
- * @param {Function} fn - Función a ejecutar en cada nodo (node, depth, path)
+ * Traverses the tree and executes a function on each node
+ * @param {Object} tree - Root node of the tree
+ * @param {Function} fn - Function to execute on each node (node, depth, path)
  */
 export function traverseTree(tree, fn, depth = 0, path = []) {
   if (!tree) return;
@@ -241,15 +241,15 @@ export function traverseTree(tree, fn, depth = 0, path = []) {
 }
 
 /**
- * Calcula posiciones iniciales para nodos hijos (antes de aplicar el layout dinámico)
- * Las posiciones finales serán recalculadas por applyDynamicLayout
- * @param {Object} parentNode - Nodo padre
- * @param {number} childrenCount - Número de nodos hijos a crear
- * @param {Object} tree - Árbol completo (no usado, mantenido por compatibilidad)
- * @returns {Array} - Array de posiciones {x, y}
+ * Calculates initial positions for child nodes (before applying dynamic layout)
+ * Final positions will be recalculated by applyDynamicLayout
+ * @param {Object} parentNode - Parent node
+ * @param {number} childrenCount - Number of child nodes to create
+ * @param {Object} tree - Full tree (not used, kept for compatibility)
+ * @returns {Array} - Array of positions {x, y}
  */
 export function calculateChildrenPositions(parentNode, childrenCount, tree) {
-  // Posiciones temporales - el layout dinámico las recalculará
+  // Temporary positions - dynamic layout will recalculate them
   const positions = [];
 
   for (let i = 0; i < childrenCount; i++) {
@@ -263,9 +263,9 @@ export function calculateChildrenPositions(parentNode, childrenCount, tree) {
 }
 
 /**
- * Resetea todas las posiciones de los nodos a sus posiciones iniciales
- * @param {Object} tree - Nodo raíz del árbol
- * @returns {Object} - Nuevo árbol con las posiciones reseteadas
+ * Resets all node positions to their initial positions
+ * @param {Object} tree - Root node of the tree
+ * @returns {Object} - New tree with reset positions
  */
 export function resetAllPositions(tree) {
   if (!tree) return null;
@@ -285,10 +285,10 @@ export function resetAllPositions(tree) {
 }
 
 /**
- * Encuentra el nodo padre de un nodo específico
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} nodeId - ID del nodo hijo
- * @returns {Object|null} - El nodo padre encontrado o null
+ * Finds the parent node of a specific node
+ * @param {Object} tree - Root node of the tree
+ * @param {string} nodeId - ID of the child node
+ * @returns {Object|null} - The found parent node or null
  */
 export function findParentNode(tree, nodeId) {
   if (!tree || !tree.children) return null;
@@ -307,10 +307,10 @@ export function findParentNode(tree, nodeId) {
 }
 
 /**
- * Obtiene el camino completo (path) desde la raíz hasta un nodo específico
- * @param {Object} tree - Nodo raíz del árbol
- * @param {string} nodeId - ID del nodo objetivo
- * @returns {Array<Object>|null} - Array de nodos del path [root, ..., target] o null si no existe
+ * Gets the full path from the root to a specific node
+ * @param {Object} tree - Root node of the tree
+ * @param {string} nodeId - ID of the target node
+ * @returns {Array<Object>|null} - Array of nodes in the path [root, ..., target] or null if not found
  */
 export function getNodePath(tree, nodeId) {
   if (!tree) return null;
@@ -338,19 +338,19 @@ export function getNodePath(tree, nodeId) {
 }
 
 // ============================================
-// LAYOUT DINÁMICO - Sistema tipo MindMeister
+// DYNAMIC LAYOUT - MindMeister-like system
 // ============================================
 
 const LAYOUT_CONFIG = {
-  horizontalSpacing: 300,    // Espacio horizontal entre columnas
-  minVerticalSpacing: 30,    // Espacio mínimo entre nodos hermanos
-  nodeHeight: 80,            // Altura base de un nodo
+  horizontalSpacing: 300,    // Horizontal space between columns
+  minVerticalSpacing: 30,    // Minimum space between sibling nodes
+  nodeHeight: 80,            // Base node height
 };
 
 /**
- * Calcula la altura total que ocupa un subárbol (incluyendo todos sus descendientes visibles)
- * @param {Object} node - Nodo raíz del subárbol
- * @returns {number} - Altura total del subárbol en píxeles
+ * Calculates the total height occupied by a subtree (including all visible descendants)
+ * @param {Object} node - Root node of the subtree
+ * @returns {number} - Total subtree height in pixels
  */
 export function getSubtreeHeight(node) {
   if (!node) return 0;
@@ -364,7 +364,7 @@ export function getSubtreeHeight(node) {
   let totalChildrenHeight = 0;
   for (let i = 0; i < node.children.length; i++) {
     totalChildrenHeight += getSubtreeHeight(node.children[i]);
-    // Añadir espacio entre hermanos (excepto después del último)
+    // Add spacing between siblings (except after the last one)
     if (i < node.children.length - 1) {
       totalChildrenHeight += LAYOUT_CONFIG.minVerticalSpacing;
     }
@@ -376,9 +376,9 @@ export function getSubtreeHeight(node) {
 }
 
 /**
- * Aplica el layout dinámico a todo el árbol, reposicionando todos los nodos
- * @param {Object} tree - Nodo raíz del árbol
- * @returns {Object} - Nuevo árbol con posiciones actualizadas
+ * Applies the dynamic layout to the entire tree, repositioning all nodes
+ * @param {Object} tree - Root node of the tree
+ * @returns {Object} - New tree with updated positions
  */
 export function applyDynamicLayout(tree) {
   if (!tree) return null;
@@ -393,10 +393,10 @@ export function applyDynamicLayout(tree) {
 }
 
 /**
- * Aplica el layout a un nodo y todos sus descendientes
- * @param {Object} node - Nodo a posicionar
- * @param {number} x - Posición X del nodo
- * @param {number} centerY - Centro Y donde posicionar el subárbol
+ * Applies layout to a node and all its descendants
+ * @param {Object} node - Node to position
+ * @param {number} x - X position of the node
+ * @param {number} centerY - Y center where the subtree should be positioned
  */
 function layoutNode(node, x, centerY) {
   // Posicionar este nodo
@@ -405,7 +405,7 @@ function layoutNode(node, x, centerY) {
   node.initialX = x;
   node.initialY = centerY;
 
-  // Si está colapsado o no tiene hijos, terminamos
+  // If collapsed or has no children, finish
   if (node.collapsed || !node.children || node.children.length === 0) {
     return;
   }
@@ -436,10 +436,10 @@ function layoutNode(node, x, centerY) {
 }
 
 /**
- * Recalcula el layout solo para un subárbol específico y ajusta los ancestros
- * @param {Object} tree - Árbol completo
- * @param {string} nodeId - ID del nodo cuyo subárbol cambió
- * @returns {Object} - Nuevo árbol con layout actualizado
+ * Recalculates the layout only for a specific subtree and adjusts ancestors
+ * @param {Object} tree - Full tree
+ * @param {string} nodeId - ID of the node whose subtree changed
+ * @returns {Object} - New tree with updated layout
  */
 export function relayoutFromNode(tree, nodeId) {
   // Por ahora, recalculamos todo el árbol para simplicidad

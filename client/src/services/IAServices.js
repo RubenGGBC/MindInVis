@@ -14,7 +14,7 @@ class IAService {
 
   async generateNodes(nodeText, nodeTipo, count = 3, nodeContext = null) {
     try {
-      const response = await this.apiClient.post('/api/mindmap/generate-nodes', {
+      const response = await this.apiClient.post('/mindmap/generate-nodes', {
         nodeText,
         nodeTipo,
         count,
@@ -47,7 +47,7 @@ class IAService {
 
   async generateNodeDetail(nodeText, nodeTipo) {
     try {
-      const response = await this.apiClient.post('/api/mindmap/generate-detail', {
+      const response = await this.apiClient.post('/mindmap/generate-detail', {
         nodeText,
         nodeTipo
       });
@@ -111,7 +111,7 @@ class IAService {
     try {
       console.log(`Aggregating ${nodes.length} nodes into ${clusterCount} clusters`);
 
-      const response = await this.apiClient.post('/api/mindmap/aggregate-nodes', {
+      const response = await this.apiClient.post('/mindmap/aggregate-nodes', {
         question,
         nodes,
         clusterCount

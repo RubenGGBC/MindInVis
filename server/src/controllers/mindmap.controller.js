@@ -546,11 +546,24 @@ export const aggregateNodes = async (req, res, next) => {
 
     const result = await openaiService.aggregateNodes(question, nodes, clusterCount);
 
+    // Check if parsing failed
+    if (result.parseError) {
+      console.error('Failed to parse aggregation response:', result.parseError);
+      console.error('Raw response:', result.raw?.substring(0, 500));
+      throw new Error(`AI response parsing failed: ${result.parseError}`);
+    }
+
+    // Validate result has clusters array
+    if (!result.clusters || !Array.isArray(result.clusters)) {
+      console.error('Invalid result structure:', result);
+      throw new Error('AI response missing clusters array');
+    }
+
     console.log(`Successfully aggregated nodes into clusters`);
 
     res.json({
       success: true,
-      clusters: result.clusters || result,
+      clusters: result.clusters,
       metadata: {
         model: 'gpt-3.5-turbo',
         nodesProcessed: nodes.length,

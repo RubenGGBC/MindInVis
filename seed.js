@@ -13,7 +13,7 @@ const connectDB = async () => {
       retryWrites: true,
       w: 'majority'
     });
-    console.log('✅ MongoDB connected successfully');
+    console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('❌ MongoDB connection error:', error.message);
     process.exit(1);
@@ -25,13 +25,13 @@ const seedDatabase = async () => {
     await connectDB();
 
     // Clear existing data
-    console.log('\n🗑️  Clearing existing data...');
+    console.log('\nClearing existing data...');
     await User.deleteMany({});
     await MindMap.deleteMany({});
     await MindMapNode.deleteMany({});
 
     // Create sample users
-    console.log('\n👥 Creating sample users...');
+    console.log('\nCreating sample users...');
     const users = await User.create([
       {
         email: 'ruben@example.com',
@@ -45,10 +45,10 @@ const seedDatabase = async () => {
       }
     ]);
 
-    console.log(`✅ Created ${users.length} users`);
+    console.log(`Created ${users.length} users`);
 
     // Create sample mind maps with nodes
-    console.log('\n🧠 Creating sample mind maps...');
+    console.log('\nCreating sample mind maps...');
     
     // Mind Map 1: Introduction to AI
     const rootNode1 = await MindMapNode.create({
@@ -218,20 +218,20 @@ const seedDatabase = async () => {
       nodeCount: 4
     });
 
-    console.log(`✅ Created 3 mind maps with 12 nodes`);
+    console.log(`Created 3 mind maps with 12 nodes`);
 
-    console.log('\n✅ Database seeded successfully!\n');
-    console.log('📊 Summary:');
+    console.log('\nDatabase seeded successfully!\n');
+    console.log('Summary:');
     console.log(`   • Users: ${users.length}`);
     console.log(`   • Mind Maps: 3`);
     console.log(`   • Total Nodes: 12`);
-    console.log('\n💡 Test credentials:');
+    console.log('\nTest credentials:');
     console.log(`   Email: ruben@example.com`);
     console.log(`   Password: password123\n`);
 
     process.exit(0);
   } catch (error) {
-    console.error('❌ Seeding error:', error);
+    console.error('Seeding error:', error);
     process.exit(1);
   }
 };

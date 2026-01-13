@@ -13,25 +13,25 @@ class OpenAIService {
     this.llm = new ChatOpenAI({
       modelName: 'gpt-4o',
       temperature: 0.7,
-      maxTokens: 500,
+      maxTokens: 2000,
       openAIApiKey: process.env.OPENAI_API_KEY,
       timeout: 30000 // 30 second timeout
     });
-    console.log('ChatOpenAI instance created with 30s timeout');
+    console.log('ChatOpenAI instance created with 30s timeout and 2000 max tokens');
   }
 
   async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null) {
     try {
       console.log('\n' + '═'.repeat(80));
-      console.log('🎯 GENERATE NODES - Entry Point');
+      console.log('GENERATE NODES - Entry Point');
       console.log('═'.repeat(80));
-      console.log(`📝 Input:`);
+      console.log(`Input:`);
       console.log(`  • Node Text: "${nodeText}"`);
       console.log(`  • Node Type: ${nodeTipo}`);
       console.log(`  • Count: ${count}`);
 
       if (nodeContextData) {
-        console.log('\n🔍 FULL TRACE CONTEXT:');
+        console.log('\nFULL TRACE CONTEXT:');
         console.log(`  • Path Length: ${nodeContextData.pathLength}`);
         console.log(`  • Full Trace Path:`);
         if (nodeContextData.fullPath && nodeContextData.fullPath.length > 0) {
@@ -44,11 +44,11 @@ class OpenAIService {
         console.log(`  • Current Answer (L${nodeContextData.pathLength}): "${nodeContextData.currentAnswer}"`);
         console.log(`  • Current Answer Note: "${nodeContextData.currentAnswerNote?.substring(0, 100)}..."`);
       } else {
-        console.log('\n⚠️  No context data provided (basic generation)');
+        console.log('\nNo context data provided (basic generation)');
       }
 
-      console.log('\n→ Calling generateNodesWithPromptBuilder...');
-      // Siempre usar generación estructurada con PromptBuilder para obtener descripciones
+      console.log('\nCalling generateNodesWithPromptBuilder...');
+      // Always use structured generation with PromptBuilder to obtain descriptions
       return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData);
     } catch (error) {
       console.error('OpenAI generation error:', error.message);
@@ -60,7 +60,7 @@ class OpenAIService {
   async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '', nodeContextData = null) {
     try {
       console.log('\n' + '═'.repeat(80));
-      console.log('📌 GENERATE NODES WITH PROMPT BUILDER');
+      console.log('GENERATE NODES WITH PROMPT BUILDER');
       console.log('═'.repeat(80));
       console.log(`Input Parameters:`);
       console.log(`  • Text: "${nodeText}"`);
@@ -78,25 +78,25 @@ class OpenAIService {
       let promptType = 'basic';
       let options = {};
 
-      console.log('\n🔄 Determining Generation Strategy:');
+      console.log('\nDetermining Generation Strategy:');
       console.log(`  • Parent Type: ${nodeTipo}`);
 
-      // LÓGICA CORRECTA DEL FLUJO:
-      // 1. PREGUNTA → Genera RESPUESTAS (sin contexto, respuestas directas)
-      // 2. RESPUESTA → Genera PREGUNTAS (con contexto completo para preguntas inteligentes)
+      // CORRECT FLOW LOGIC:
+      // 1. QUESTION → generate ANSWERS (no context, direct answers)
+      // 2. ANSWER → generate QUESTIONS (with full context for smart questions)
 
       if (nodeTipo === 'pregunta') {
-        // PREGUNTA → RESPUESTAS (sin contexto, respuestas básicas)
+        // QUESTION → ANSWERS (no context, basic answers)
         console.log(`  → Generating ANSWERS from a QUESTION`);
         console.log(`  → Using basic prompt (no context needed for answers)`);
         promptType = 'basic';
 
       } else if (nodeTipo === 'respuesta') {
-        // RESPUESTA → PREGUNTAS (con contexto si disponible)
+        // ANSWER → QUESTIONS (with context if available)
         console.log(`  → Generating QUESTIONS from an ANSWER`);
 
         if (nodeContextData && nodeContextData.pathLength >= 1) {
-          // Tenemos contexto: usar contexto completo para generar preguntas de seguimiento inteligentes
+          // We have context: use full context to generate intelligent follow-up questions
           promptType = 'suggested-llm';
           options = {
             answerLabel: nodeContextData.currentAnswer,
@@ -106,40 +106,40 @@ class OpenAIService {
             fullPath: nodeContextData.fullPath
           };
 
-          console.log(`\n✨ CONTEXTUAL QUESTIONS - Using enhanced prompt with trace`);
+          console.log(`\nCONTEXTUAL QUESTIONS - Using enhanced prompt with trace`);
           console.log(`  • Context Path Length: ${nodeContextData.pathLength}`);
           console.log(`  • Full Trace: ${nodeContextData.fullPath?.join(' → ') || 'N/A'}`);
           console.log(`  • Root Question (L1): "${nodeContextData.firstQuestion}"`);
           console.log(`  • Previous Question (L${nodeContextData.pathLength - 1}): "${nodeContextData.previousQuestion}"`);
           console.log(`  • Current Answer (L${nodeContextData.pathLength}): "${nodeContextData.currentAnswer}"`);
-          console.log(`  • Prompt Type: ${promptType} ← CONTEXTUAL QUESTIONS`);
+          console.log(`  • Prompt Type: ${promptType} <- CONTEXTUAL QUESTIONS`);
         } else {
-          // Sin contexto: preguntas básicas exploratorias
+          // No context: basic exploratory questions
           console.log(`  → No context available, using basic exploratory questions`);
           promptType = 'basic';
         }
       } else {
-        console.log(`  ⚠️  Unknown type: ${nodeTipo}, using basic`);
+        console.log(`  Unknown type: ${nodeTipo}, using basic`);
         promptType = 'basic';
       }
 
-      console.log(`\n📤 Final Prompt Type: ${promptType}`);
+      console.log(`\nFinal Prompt Type: ${promptType}`);
       console.log('Calling generateStructuredNodes...');
 
       let result;
       try {
         result = await this.generateStructuredNodes(nodeContext, question, promptType, options);
       } catch (structuredError) {
-        console.error('❌ generateStructuredNodes failed:', structuredError.message);
+        console.error('generateStructuredNodes failed:', structuredError.message);
         throw structuredError;
       }
       
       if (!result) {
-        console.error('❌ generateStructuredNodes returned null/undefined');
+        console.error('generateStructuredNodes returned null/undefined');
         throw new Error('No result from generateStructuredNodes');
       }
 
-      console.log('\n✅ Successfully processed result');
+      console.log('\nSuccessfully processed result');
       console.log('Result structure:', {
         hasItems: !!result.items,
         itemsLength: result.items?.length,
@@ -147,7 +147,7 @@ class OpenAIService {
       });
 
       const nodes = this._extractNodesFromStructuredResponse(result, count);
-      console.log(`✅ Extracted ${nodes.length} nodes`);
+      console.log(`Extracted ${nodes.length} nodes`);
       if (nodes.length > 0) {
         console.log('First node sample:', {
           text: nodes[0].text?.substring(0, 50),
@@ -158,7 +158,7 @@ class OpenAIService {
 
       return { nodes };
     } catch (error) {
-      console.error('❌ PromptBuilder generation error:', error);
+      console.error('PromptBuilder generation error:', error);
       console.error('Stack:', error.stack);
       console.log('═'.repeat(80) + '\n');
       throw error;
@@ -221,7 +221,7 @@ class OpenAIService {
         // OpenAI devuelve: {"item":"Developmental Stage", "description":"..."}
         // O: {"Global Temperature Rise":"...", "description":"..."}
         if (!text) {
-          // Prioridad 1: buscar por claves conocidas genéricas
+          // Priority 1: look for known generic keys
           if (item.item && typeof item.item === 'string') {
             text = item.item;
             console.log(`  Found as item.item: "${text}"`);
@@ -229,12 +229,12 @@ class OpenAIService {
             text = item.name;
             console.log(`  Found as item.name: "${text}"`);
           } else {
-            // Prioridad 2: tomar la primera propiedad que no sea 'description' o 'excerpt'
+            // Priority 2: take the first property that is not 'description' or 'excerpt'
             for (const [key, value] of Object.entries(item)) {
               if (key !== 'description' && key !== 'excerpt' && typeof value === 'string') {
                 // Esta es la clave del item (ej: "Global Temperature Rise")
                 text = key;
-                // Si el valor de esta key es la descripción, guardarla
+                // If the value of this key is the description, save it
                 description = value;
                 console.log(`  Found as key: "${text}" with description in value`);
                 break;
@@ -337,19 +337,19 @@ Formato: Una pregunta por línea`)
 
       switch(type) {
         case 'basic':
-          console.log('\n📋 BASIC PROMPT (no context)');
+          console.log('\nBASIC PROMPT (no context)');
           console.log('─'.repeat(80));
           prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
           console.log('✓ Simple prompt - just the question');
           break;
         case 'pdf':
-          console.log('\n📄 PDF PROMPT');
+          console.log('\nPDF PROMPT');
           console.log('─'.repeat(80));
           console.warn('PDF-based prompts require PDF upload functionality');
           prompt = PromptBuilder.getPromptForPDFAnswers(nodeContext, question);
           break;
         case 'aggregation':
-          console.log('\n🔗 AGGREGATION PROMPT');
+          console.log('\nAGGREGATION PROMPT');
           console.log('─'.repeat(80));
           console.log(`Clustering ${options.nodes?.length || 0} nodes into ${options.clusterCount || 3} groups`);
           prompt = PromptBuilder.getPromptForSummarizationAnswers(
@@ -359,7 +359,7 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'summarization-questions':
-          console.log('\n❓ SUMMARIZATION QUESTIONS PROMPT');
+          console.log('\nSUMMARIZATION QUESTIONS PROMPT');
           console.log('─'.repeat(80));
           prompt = PromptBuilder.getPromptForSummarizationQuestions(
             question,
@@ -368,9 +368,9 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-model':
-          console.log('\n🎯 SUGGESTED MODEL PROMPT (with full context)');
+          console.log('\nSUGGESTED MODEL PROMPT (with full context)');
           console.log('─'.repeat(80));
-          console.log('📍 CONTEXT INFORMATION:');
+          console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
           console.log(`  • Current Answer (Level 3):   "${options.answerLabel}"`);
@@ -387,9 +387,9 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-logs':
-          console.log('\n📚 SUGGESTED LOGS PROMPT (with history)');
+          console.log('\nSUGGESTED LOGS PROMPT (with history)');
           console.log('─'.repeat(80));
-          console.log('📍 CONTEXT INFORMATION:');
+          console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
           console.log(`  • Current Answer (Level 3):   "${options.answerLabel}"`);
@@ -406,9 +406,9 @@ Formato: Una pregunta por línea`)
           );
           break;
         case 'suggested-llm':
-          console.log('\n🤖 SUGGESTED LLM PROMPT (with full context - KEY FEATURE)');
+          console.log('\nSUGGESTED LLM PROMPT (with full context - KEY FEATURE)');
           console.log('─'.repeat(80));
-          console.log('📍 CONTEXT INFORMATION:');
+          console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Parent Question (Level ${options.fullPath?.length - 1 || '?'}): "${options.previousQuestion}"`);
           console.log(`  • Full Ancestry Path:         ${options.fullPath?.join(' → ') || 'N/A'}`);
@@ -427,11 +427,11 @@ Formato: Una pregunta por línea`)
           throw new Error(`Unknown type: ${type}`);
       }
 
-      console.log('\n📄 FULL PROMPT BEING SENT TO LLM:');
+      console.log('\nFULL PROMPT BEING SENT TO LLM:');
       console.log('─'.repeat(80));
       console.log(prompt);
       console.log('─'.repeat(80));
-      console.log('\n⏳ Invoking LLM...\n');
+      console.log('\nInvoking LLM...\n');
 
       const messages = [
         new SystemMessage('You are an expert mind mapping assistant. Provide responses in valid JSON format.'),
@@ -447,30 +447,30 @@ Formato: Una pregunta por línea`)
       try {
         response = await Promise.race([this.llm.invoke(messages), timeoutPromise]);
       } catch (apiError) {
-        console.error('❌ OpenAI API error:', apiError.message);
+        console.error('OpenAI API error:', apiError.message);
         throw new Error(`OpenAI API failed: ${apiError.message}`);
       }
       
       if (!response) {
-        console.error('❌ OpenAI returned null/undefined response');
+        console.error('OpenAI returned null/undefined response');
         throw new Error('No response from OpenAI');
       }
       
-      console.log('✅ LLM Response received, length:', response.content?.length);
+      console.log('LLM Response received, length:', response.content?.length);
       console.log('Response preview:', response.content?.substring(0, 200) + '...\n');
 
       const parsedResponse = this._parseStructuredResponse(response.content);
-      console.log('✅ Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
+      console.log('Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
       console.log(`${'═'.repeat(80)}\n`);
 
       if (!parsedResponse || typeof parsedResponse !== 'object') {
-        console.error('❌ Parsed response is invalid:', parsedResponse);
+        console.error('Parsed response is invalid:', parsedResponse);
         throw new Error('Invalid parsed response');
       }
 
       return parsedResponse;
     } catch (error) {
-      console.error('❌ OpenAI structured generation error:', error.message);
+      console.error('OpenAI structured generation error:', error.message);
       console.error('Error details:', error);
       console.log(`${'═'.repeat(80)}\n`);
       throw error;
@@ -482,23 +482,28 @@ Formato: Una pregunta por línea`)
       return { error: 'Invalid response' };
     }
 
-    try {
-      let jsonText = aiResponse;
+    let jsonText = aiResponse.trim();
 
-      const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/);
-      if (jsonMatch) {
-        jsonText = jsonMatch[1];
-      } else {
-        const codeMatch = aiResponse.match(/```\s*([\s\S]*?)\s*```/);
-        if (codeMatch) {
-          jsonText = codeMatch[1];
-        }
+    try {
+      // Remove markdown code blocks more aggressively
+      // Try ```json ... ``` first
+      if (jsonText.includes('```json')) {
+        jsonText = jsonText.replace(/^```json\s*/m, '').replace(/\s*```\s*$/m, '');
+      }
+      // Try ``` ... ``` (without json label)
+      else if (jsonText.startsWith('```')) {
+        jsonText = jsonText.replace(/^```\s*/m, '').replace(/\s*```\s*$/m, '');
       }
 
-      const parsed = JSON.parse(jsonText.trim());
+      // Remove any remaining backticks at start/end
+      jsonText = jsonText.replace(/^`+/, '').replace(/`+$/, '').trim();
+
+      const parsed = JSON.parse(jsonText);
       return parsed;
     } catch (error) {
       console.error('Failed to parse JSON response:', error.message);
+      console.error('Attempted to parse (first 500 chars):', jsonText.substring(0, 500));
+      console.error('Last 200 chars:', jsonText.substring(Math.max(0, jsonText.length - 200)));
       return {
         raw: aiResponse,
         parseError: error.message

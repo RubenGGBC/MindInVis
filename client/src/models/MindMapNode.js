@@ -138,8 +138,9 @@ class MindMapNode {
     node.width = typeof data.width === 'number' && data.width > 0 ? data.width : 200;
     node.height = typeof data.height === 'number' && data.height > 0 ? data.height : 80;
     node.fontSize = typeof data.fontSize === 'number' && data.fontSize > 0 ? data.fontSize : 16;
-    node.backgroundColor = typeof data.backgroundColor === 'string' ? data.backgroundColor : '#ffffff';
-    node.borderColor = typeof data.borderColor === 'string' ? data.borderColor : '#8b5cf6';
+    // Use constructor-assigned defaults when stored data doesn't include colors
+    node.backgroundColor = typeof data.backgroundColor === 'string' ? data.backgroundColor : node.backgroundColor;
+    node.borderColor = typeof data.borderColor === 'string' ? data.borderColor : node.borderColor;
     node.borderWidth = typeof data.borderWidth === 'number' && data.borderWidth >= 0 ? data.borderWidth : 2;
 
     // Restaurar metadatos

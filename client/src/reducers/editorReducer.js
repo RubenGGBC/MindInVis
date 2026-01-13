@@ -12,6 +12,7 @@ export const ACTIONS = {
   UPDATE_NODE_PROPERTY: 'UPDATE_NODE_PROPERTY',
   ADD_CHILD: 'ADD_CHILD',
   ADD_CHILDREN: 'ADD_CHILDREN',
+  REPLACE_CHILDREN: 'REPLACE_CHILDREN',
   DELETE_NODE: 'DELETE_NODE',
   SET_TREE: 'SET_TREE',
   MARK_CHILDREN_GENERATED: 'MARK_CHILDREN_GENERATED',
@@ -99,6 +100,22 @@ export function editorReducer(state, action) {
 
       // Marcar que este nodo ya generó hijos
       newTree = updateNode(newTree, parentId, () => ({
+        hasGeneratedChildren: true,
+        lastModified: Date.now()
+      }));
+
+      // Recalcular layout dinámico
+      newTree = applyDynamicLayout(newTree);
+
+      return addToHistory(state, newTree);
+    }
+
+    case ACTIONS.REPLACE_CHILDREN: {
+      const { parentId, newChildrenNodes } = action.payload;
+
+      // Reemplazar los hijos del nodo padre con los nuevos nodos
+      let newTree = updateNode(state.tree, parentId, () => ({
+        children: newChildrenNodes,
         hasGeneratedChildren: true,
         lastModified: Date.now()
       }));
@@ -295,6 +312,11 @@ export const actionCreators = {
   addChildren: (parentId, childrenNodes) => ({
     type: ACTIONS.ADD_CHILDREN,
     payload: { parentId, childrenNodes }
+  }),
+
+  replaceChildren: (parentId, newChildrenNodes) => ({
+    type: ACTIONS.REPLACE_CHILDREN,
+    payload: { parentId, newChildrenNodes }
   }),
 
   deleteNode: (nodeId) => ({

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Handle, Position } from 'reactflow';
+import { createPortal } from 'react-dom';
 import './Node.css';
 import NodeDetailsPopup from './NodeDetailsPopup';
+import SummarizePopup from './SummarizePopup';
+import NodeContextMenu from './NodeContextMenu';
 
 // Funciones helper para colores por defecto
 function getDefaultBackgroundColor(tipo) {
@@ -41,8 +44,10 @@ function calculateFontSize(text, width, height) {
 }
 
 const ReactFlowNode = ({ data }) => {
-  const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, selected } = data;
+  const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, onSummarize, onStyleChange, selected } = data;
   const [showPopup, setShowPopup] = useState(false);
+  const [showSummarizePopup, setShowSummarizePopup] = useState(false);
+  const [contextMenu, setContextMenu] = useState(null);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -70,25 +75,56 @@ const ReactFlowNode = ({ data }) => {
     setShowPopup(!showPopup);
   };
 
+  const handleToggleSummarizePopup = (e) => {
+    e.stopPropagation();
+    setShowSummarizePopup(!showSummarizePopup);
+  };
+
+  const handleSummarizeConfirm = (targetCount) => {
+    if (onSummarize) {
+      onSummarize(node, targetCount);
+    }
+    setShowSummarizePopup(false);
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY
+    });
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleContextSummarize = () => {
+    setShowSummarizePopup(true);
+  };
+
   const width = node.width || 200;
   const height = node.height || 80;
-  const dynamicFontSize = calculateFontSize(node.text, width, height);
+  const fontSize = node.fontSize || calculateFontSize(node.text, width, height);
 
   const nodeStyle = {
     width: `${width}px`,
     height: `${height}px`,
-    fontSize: `${dynamicFontSize}px`,
+    fontSize: `${fontSize}px`,
     backgroundColor: node.backgroundColor || getDefaultBackgroundColor(node.tipo),
     borderColor: node.borderColor || getDefaultBorderColor(node.tipo),
     borderWidth: `${node.borderWidth || 2}px`,
   };
 
   return (
+    <>
     <div
       className={`mindmap-node ${selected ? 'selected' : ''} node-tipo-${node.tipo}`}
       style={nodeStyle}
       onDoubleClick={(e) => onNodeDoubleClick(e, node)}
       onClick={(e) => onNodeClick(e, node)}
+      onContextMenu={handleContextMenu}
     >
       <Handle type="target" position={Position.Left} />
       {isEditing ? (
@@ -117,41 +153,34 @@ const ReactFlowNode = ({ data }) => {
           </div>
         </div>
       )}
-      {!isEditing && onToggleCollapse && node.children && node.children.length > 0 && (
-        <button
-          className="node-collapse-button"
-          onClick={handleToggleCollapse}
-          title={node.collapsed ? "Expand children" : "Collapse children"}
-        >
-          {node.collapsed ? '▶' : '▼'}
-        </button>
-      )}
-      {!isEditing && onAddChild && (
-        <button
-          className="node-add-button"
-          onClick={handleAddClick}
-          title="Add child node"
-        >
-          +
-        </button>
-      )}
-      {!isEditing && (node.description || node.source) && (
-        <button
-          className="node-details-button"
-          onClick={handleTogglePopup}
-          title="View AI details"
-        >
-          i
-        </button>
-      )}
       {showPopup && (node.description || node.source) && (
         <NodeDetailsPopup
           node={node}
           onClose={() => setShowPopup(false)}
         />
       )}
+      {showSummarizePopup && (
+        <SummarizePopup
+          node={node}
+          onConfirm={handleSummarizeConfirm}
+          onClose={() => setShowSummarizePopup(false)}
+        />
+      )}
       <Handle type="source" position={Position.Right} />
     </div>
+    {contextMenu && createPortal(
+      <NodeContextMenu
+        node={node}
+        position={contextMenu}
+        nodePosition={{ x: node.x, y: node.y }}
+        onClose={handleCloseContextMenu}
+        onStyleChange={onStyleChange}
+        onSummarize={handleContextSummarize}
+        onToggleCollapse={onToggleCollapse}
+      />,
+      document.body
+    )}
+    </>
   );
 };
 
