@@ -15,7 +15,7 @@ export const createMindMap = async (req, res) => {
     const rootNode = await MindMapNode.create({
       id: `root-${Date.now()}`,
       text: title || 'Tema Central',
-      type: 'root',
+      type: 'pregunta',
       x: 200,
       y: 400
     });
@@ -267,7 +267,7 @@ export const saveMindMapState = async (req, res) => {
         {
           id: node.id,
           text: node.text,
-          type: node.type,
+          type: node.tipo || node.type || 'respuesta',
           x: node.x,
           y: node.y,
           width: node.width,

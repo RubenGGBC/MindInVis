@@ -1,10 +1,24 @@
 import { Home, Star, Settings, Brain, TrendingUp, Sparkles } from 'lucide-react';
 import './Sidebar.css';
+import { mapService } from '../../services/mapService';
+import { useEffect, useState } from 'react';
 
 const Sidebar = () => {
+  const [mapcount, setMapcount] = useState(0);
+
+  useEffect(() => {
+    const fetchMapCount = async () => {
+      try {
+        const maps = await mapService.getAllMaps();
+        setMapcount(maps.length);
+      } catch (error) {
+        console.error('Error fetching map count:', error);
+      }
+    };
+    fetchMapCount();
+  }, []);
   const stats = [
-    { label: 'Maps created', value: '24', color: 'cyan' },
-    { label: 'AI generated', value: '18', color: 'purple' },
+    { label: 'Maps created', value: mapcount , color: 'cyan' },
   ];
 
   return (

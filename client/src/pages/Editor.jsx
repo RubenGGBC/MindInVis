@@ -1,6 +1,6 @@
 import { useState, useReducer, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Save, Share2 } from 'lucide-react';
+import { ArrowLeft, Sparkles, Save, Share2, Settings } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import ReactFlow, {
   Controls,
@@ -14,6 +14,7 @@ import 'reactflow/dist/style.css';
 
 import './Editor.css';
 import Toolbar from '../components/editor/Toolbar';
+import SettingsPanel from '../components/editor/SettingsPanel';
 import MindMapNode from '../models/MindMapNode';
 import IAService from '../services/IAServices';
 import { mapService } from '../services/mapService';
@@ -118,6 +119,7 @@ const Editor = () => {
   const [editingText, setEditingText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // Estado para mostrar/ocultar sidebar
   const [sidebarVisible, setSidebarVisible] = useState(true);
@@ -448,10 +450,11 @@ const Editor = () => {
         
         // Llamar a la API real con el tipo de nodo y contexto opcional
         // Enviar el TIPO DEL PADRE (no del hijo) para que el servidor sepa si usar contexto
+        const nodeCount = parseInt(localStorage.getItem('mindinvis_node_count') || '3');
         const responses = await iaService.generateNodes(
           editingText,
           currentNode.tipo,  // TIPO DEL PADRE (pregunta o respuesta)
-          3, // Cantidad de nodos a generar
+          nodeCount, // Cantidad de nodos a generar desde configuración
           nodeContext
         );
 
@@ -600,9 +603,9 @@ const Editor = () => {
             <Share2 size={18} />
             Share
           </button>
-          <button className="editor-btn primary">
-            <Sparkles size={18} />
-            AI
+          <button className="editor-btn primary" onClick={() => setIsSettingsOpen(true)}>
+            <Settings size={18} />
+            Settings
           </button>
         </div>
       </header>
@@ -640,108 +643,11 @@ const Editor = () => {
         </ReactFlow>
       </div>
 
-
-      {/* Properties Panel */}
-      <aside className={`editor-sidebar ${sidebarVisible ? 'visible' : 'hidden'}`}>
-        <div className="sidebar-header">
-          <h3 className="sidebar-title">Propiedades</h3>
-          <button
-            className="sidebar-toggle-btn"
-            onClick={() => setSidebarVisible(!sidebarVisible)}
-            title={sidebarVisible ? 'Ocultar propiedades (F9)' : 'Mostrar propiedades (F9)'}
-          >
-            {sidebarVisible ? '→' : '←'}
-          </button>
-        </div>
-
-        {selectedNode ? (
-          <div className="properties-panel">
-            <div className="property-group">
-              <label className="property-label">Ancho (px)</label>
-              <input
-                type="number"
-                value={nodeProperties.width}
-                onChange={(e) => handlePropertyChange('width', parseInt(e.target.value) || 200)}
-                className="property-input"
-                min="100"
-                max="500"
-              />
-            </div>
-
-            <div className="property-group">
-              <label className="property-label">Alto (px)</label>
-              <input
-                type="number"
-                value={nodeProperties.height}
-                onChange={(e) => handlePropertyChange('height', parseInt(e.target.value) || 80)}
-                className="property-input"
-                min="50"
-                max="300"
-              />
-            </div>
-
-            <div className="property-group">
-              <label className="property-label">Tamaño de fuente (px)</label>
-              <input
-                type="number"
-                value={nodeProperties.fontSize}
-                onChange={(e) => handlePropertyChange('fontSize', parseInt(e.target.value) || 16)}
-                className="property-input"
-                min="10"
-                max="32"
-              />
-            </div>
-
-            <div className="property-group">
-              <label className="property-label">Color de fondo</label>
-              <input
-                type="color"
-                value={nodeProperties.backgroundColor}
-                onChange={(e) => handlePropertyChange('backgroundColor', e.target.value)}
-                className="property-input-color"
-              />
-            </div>
-
-            <div className="property-group">
-              <label className="property-label">Color de borde</label>
-              <input
-                type="color"
-                value={nodeProperties.borderColor}
-                onChange={(e) => handlePropertyChange('borderColor', e.target.value)}
-                className="property-input-color"
-              />
-            </div>
-
-            <div className="property-group">
-              <label className="property-label">Grosor de borde (px)</label>
-              <input
-                type="number"
-                value={nodeProperties.borderWidth}
-                onChange={(e) => handlePropertyChange('borderWidth', parseInt(e.target.value) || 2)}
-                className="property-input"
-                min="0"
-                max="10"
-              />
-            </div>
-          </div>
-        ) : (
-          <p className="sidebar-placeholder">Haz clic en un nodo para ver sus propiedades</p>
-        )}
-      </aside>
-
-      {/* Botón flotante para abrir sidebar cuando está oculto */}
-      {!sidebarVisible && (
-        <button
-          className="sidebar-floating-btn"
-          onClick={() => setSidebarVisible(true)}
-          title="Mostrar propiedades (F9)"
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            ← Propiedades
-            <span style={{ fontSize: '11px', opacity: 0.6 }}>F9</span>
-          </span>
-        </button>
-      )}
+      {/* Settings Panel */}
+      <SettingsPanel 
+        isOpen={isSettingsOpen} 
+        onClose={() => setIsSettingsOpen(false)} 
+      />
 
     </div>
   );

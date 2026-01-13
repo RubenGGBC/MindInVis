@@ -1,31 +1,63 @@
 import { useState, useEffect } from 'react';
-import { Settings, X } from 'lucide-react';
+import { Settings, X, Palette } from 'lucide-react';
 import './SettingsPanel.css';
 
 const SettingsPanel = ({ isOpen, onClose }) => {
   const [apiKey, setApiKey] = useState('');
   const [nodeCount, setNodeCount] = useState(3);
   const [showApiKey, setShowApiKey] = useState(false);
+  
+  // Colores predeterminados
+  const [preguntaBgColor, setPreguntaBgColor] = useState('#1e3a8a');
+  const [preguntaBorderColor, setPreguntaBorderColor] = useState('#3b82f6');
+  const [respuestaBgColor, setRespuestaBgColor] = useState('#065f46');
+  const [respuestaBorderColor, setRespuestaBorderColor] = useState('#10b981');
 
   // Cargar configuración guardada
   useEffect(() => {
     const savedApiKey = localStorage.getItem('mindinvis_api_key') || '';
     const savedNodeCount = localStorage.getItem('mindinvis_node_count') || '3';
+    const savedPreguntaBg = localStorage.getItem('mindinvis_pregunta_bg') || '#1e3a8a';
+    const savedPreguntaBorder = localStorage.getItem('mindinvis_pregunta_border') || '#3b82f6';
+    const savedRespuestaBg = localStorage.getItem('mindinvis_respuesta_bg') || '#065f46';
+    const savedRespuestaBorder = localStorage.getItem('mindinvis_respuesta_border') || '#10b981';
+    
     setApiKey(savedApiKey);
     setNodeCount(parseInt(savedNodeCount));
+    setPreguntaBgColor(savedPreguntaBg);
+    setPreguntaBorderColor(savedPreguntaBorder);
+    setRespuestaBgColor(savedRespuestaBg);
+    setRespuestaBorderColor(savedRespuestaBorder);
   }, [isOpen]);
 
   const handleSave = () => {
     localStorage.setItem('mindinvis_api_key', apiKey);
     localStorage.setItem('mindinvis_node_count', nodeCount.toString());
+    localStorage.setItem('mindinvis_pregunta_bg', preguntaBgColor);
+    localStorage.setItem('mindinvis_pregunta_border', preguntaBorderColor);
+    localStorage.setItem('mindinvis_respuesta_bg', respuestaBgColor);
+    localStorage.setItem('mindinvis_respuesta_border', respuestaBorderColor);
+    
+    // Disparar evento personalizado para que otros componentes sepan que cambió
+    window.dispatchEvent(new Event('mindinvis-settings-updated'));
+    
     onClose();
   };
 
   const handleReset = () => {
     setApiKey('');
     setNodeCount(3);
+    setPreguntaBgColor('#1e3a8a');
+    setPreguntaBorderColor('#3b82f6');
+    setRespuestaBgColor('#065f46');
+    setRespuestaBorderColor('#10b981');
+    
     localStorage.removeItem('mindinvis_api_key');
     localStorage.removeItem('mindinvis_node_count');
+    localStorage.removeItem('mindinvis_pregunta_bg');
+    localStorage.removeItem('mindinvis_pregunta_border');
+    localStorage.removeItem('mindinvis_respuesta_bg');
+    localStorage.removeItem('mindinvis_respuesta_border');
   };
 
   if (!isOpen) return null;
@@ -85,11 +117,108 @@ const SettingsPanel = ({ isOpen, onClose }) => {
             </p>
           </div>
 
+          <div className="settings-divider"></div>
+
+          <div className="settings-group">
+            <label className="settings-label">
+              <Palette size={16} style={{ display: 'inline', marginRight: '8px' }} />
+              Colores de Nodos: Preguntas
+            </label>
+            
+            <div className="color-picker-group">
+              <div className="color-picker-item">
+                <label className="color-picker-label">Fondo</label>
+                <div className="color-picker-wrapper">
+                  <input
+                    type="color"
+                    value={preguntaBgColor}
+                    onChange={(e) => setPreguntaBgColor(e.target.value)}
+                    className="color-picker-input"
+                  />
+                  <input
+                    type="text"
+                    value={preguntaBgColor}
+                    onChange={(e) => setPreguntaBgColor(e.target.value)}
+                    className="color-text-input"
+                    placeholder="#1e3a8a"
+                  />
+                </div>
+              </div>
+              
+              <div className="color-picker-item">
+                <label className="color-picker-label">Borde</label>
+                <div className="color-picker-wrapper">
+                  <input
+                    type="color"
+                    value={preguntaBorderColor}
+                    onChange={(e) => setPreguntaBorderColor(e.target.value)}
+                    className="color-picker-input"
+                  />
+                  <input
+                    type="text"
+                    value={preguntaBorderColor}
+                    onChange={(e) => setPreguntaBorderColor(e.target.value)}
+                    className="color-text-input"
+                    placeholder="#3b82f6"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="settings-group">
+            <label className="settings-label">
+              <Palette size={16} style={{ display: 'inline', marginRight: '8px' }} />
+              Colores de Nodos: Respuestas
+            </label>
+            
+            <div className="color-picker-group">
+              <div className="color-picker-item">
+                <label className="color-picker-label">Fondo</label>
+                <div className="color-picker-wrapper">
+                  <input
+                    type="color"
+                    value={respuestaBgColor}
+                    onChange={(e) => setRespuestaBgColor(e.target.value)}
+                    className="color-picker-input"
+                  />
+                  <input
+                    type="text"
+                    value={respuestaBgColor}
+                    onChange={(e) => setRespuestaBgColor(e.target.value)}
+                    className="color-text-input"
+                    placeholder="#065f46"
+                  />
+                </div>
+              </div>
+              
+              <div className="color-picker-item">
+                <label className="color-picker-label">Borde</label>
+                <div className="color-picker-wrapper">
+                  <input
+                    type="color"
+                    value={respuestaBorderColor}
+                    onChange={(e) => setRespuestaBorderColor(e.target.value)}
+                    className="color-picker-input"
+                  />
+                  <input
+                    type="text"
+                    value={respuestaBorderColor}
+                    onChange={(e) => setRespuestaBorderColor(e.target.value)}
+                    className="color-text-input"
+                    placeholder="#10b981"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div className="settings-info-box">
             <h4>💡 Información</h4>
             <ul>
               <li>La API key se guarda localmente en tu navegador</li>
               <li>El número de nodos afecta a la generación automática</li>
+              <li>Los colores se aplicarán a los nuevos nodos creados</li>
               <li>Puedes cambiar estos valores en cualquier momento</li>
             </ul>
           </div>

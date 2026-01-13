@@ -18,13 +18,13 @@ class MindMapNode {
     this.height = 80;
     this.fontSize = 16;
 
-    // Asignar colores basados en tipo
+    // Asignar colores basados en tipo y configuración guardada
     if (tipo === 'pregunta') {
-      this.backgroundColor = '#1e3a8a';
-      this.borderColor = '#3b82f6';
+      this.backgroundColor = localStorage.getItem('mindinvis_pregunta_bg') || '#1e3a8a';
+      this.borderColor = localStorage.getItem('mindinvis_pregunta_border') || '#3b82f6';
     } else if (tipo === 'respuesta') {
-      this.backgroundColor = '#065f46';
-      this.borderColor = '#10b981';
+      this.backgroundColor = localStorage.getItem('mindinvis_respuesta_bg') || '#065f46';
+      this.borderColor = localStorage.getItem('mindinvis_respuesta_border') || '#10b981';
     } else if (tipo === 'root') {
       this.backgroundColor = '#581c87';
       this.borderColor = '#8b5cf6';
