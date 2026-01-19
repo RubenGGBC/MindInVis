@@ -3,7 +3,7 @@ import axios from 'axios';
 class UploadService {
   constructor() {
     this.apiClient = axios.create({
-      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000',
+      baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
       timeout: 60000,
       headers: {
         'Content-Type': 'multipart/form-data'
@@ -100,7 +100,7 @@ class UploadService {
   }
 
   getFileUrl(filename) {
-    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
     return `${baseURL}/uploads/${filename}`;
   }
 }

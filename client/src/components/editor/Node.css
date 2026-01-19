@@ -98,6 +98,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
   }
 
   .node-content {
@@ -116,6 +117,46 @@
     overflow: hidden;
     line-height: 1.3;
     white-space: normal;
+  }
+
+  .node-action-buttons {
+    position: absolute;
+    bottom: -18px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 6px;
+    z-index: 15;
+  }
+
+  .node-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border: 2px solid var(--surface);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+  }
+
+  .node-action-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.5);
+  }
+
+  .node-action-btn:active {
+    transform: scale(0.95);
+  }
+
+  .mindmap-node:hover .node-action-buttons {
+    bottom: -18px;
   }
 
   .node-add-button {

@@ -97,7 +97,8 @@
 
 .context-menu-content {
   padding: 16px;
-  max-height: 500px;
+  min-height: 400px;
+  max-height: 600px;
   overflow-y: auto;
 }
 
@@ -269,6 +270,32 @@
 
 .action-button:active {
   transform: translateX(2px);
+}
+
+.action-button.uploading {
+  animation: pulse 1s infinite;
+}
+
+.action-button.success {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+}
+
+.action-button.success .action-icon {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.action-button.compacting {
+  animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
 }
 
 .action-icon {

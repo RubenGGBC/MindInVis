@@ -1,3 +1,0 @@
-# docker-compose configuration removed from repository.
-# This project is configured to run locally on port 3000 for the server.
-# If orchestration is needed, recreate a compose file tailored to your environment.

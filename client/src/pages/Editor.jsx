@@ -85,15 +85,13 @@ const treeToFlow = (
 };
 
 // Determina el tipo de hijo basado en el tipo del padre
-function getChildTipo(parentTipo) {
-  // pregunta → respuesta
-  // respuesta → pregunta
-  // (Nota: root no existe más, es ahora una pregunta)
+function getChildTipo(parentTipo, pathLength = 0) {
+  // Flujo alternante: pregunta → respuesta → pregunta → respuesta...
   
   if (parentTipo === 'pregunta') {
-    return 'respuesta';  // Questions generate answers (with context if depth >= 2)
+    return 'respuesta';  // Questions generate answers
   } else if (parentTipo === 'respuesta') {
-    return 'pregunta';   // Answers generate questions (without context)
+    return 'pregunta';   // Answers generate questions
   }
   return 'respuesta'; // fallback
 }
@@ -337,13 +335,17 @@ const Editor = () => {
 
     // Calcular posición vertical basada en el número de hijos existentes
     const offsetY = childrenCount * verticalSpacing;
+    
+    // Obtener pathLength para determinar el tipo correcto del hijo
+    const nodePath = getNodePath(state.tree, selectedNodeId);
+    const pathLength = nodePath?.length || 0;
 
     const newChild = new MindMapNode(
       `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       'Nuevo nodo',
       selectedNode.x + horizontalOffset, // A la derecha
       selectedNode.y + offsetY, // Debajo del último hijo
-      getChildTipo(selectedNode.tipo)
+      getChildTipo(selectedNode.tipo, pathLength)
     );
 
     dispatch(actionCreators.addChild(selectedNodeId, newChild));
@@ -355,13 +357,17 @@ const Editor = () => {
     const childrenCount = parentNode.children?.length || 0;
 
     const offsetY = childrenCount * verticalSpacing;
+    
+    // Obtener pathLength para determinar el tipo correcto del hijo
+    const nodePath = getNodePath(state.tree, parentNode.id);
+    const pathLength = nodePath?.length || 0;
 
     const newChild = new MindMapNode(
       `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       'Nuevo nodo',
       parentNode.x + horizontalOffset,
       parentNode.y + offsetY,
-      getChildTipo(parentNode.tipo)
+      getChildTipo(parentNode.tipo, pathLength)
     );
 
     dispatch(actionCreators.addChild(parentNode.id, newChild));
@@ -427,8 +433,10 @@ const Editor = () => {
       // Calcular posiciones para los nuevos nodos
       const positions = calculateChildrenPositions(parentNode, clusters.length, state.tree);
 
-      // Determinar el tipo de los hijos
-      const childType = getChildTipo(parentNode.tipo);
+      // Determinar el tipo de los hijos basado en profundidad
+      const nodePath = getNodePath(state.tree, parentNode.id);
+      const pathLength = nodePath?.length || 0;
+      const childType = getChildTipo(parentNode.tipo, pathLength);
 
       // Crear nuevos nodos a partir de los clusters
       const newChildren = clusters.map((cluster, index) => {
@@ -526,11 +534,17 @@ const Editor = () => {
           hasGeneratedChildren: currentNode?.hasGeneratedChildren
         });
         
-        // Construir contexto del nodo SOLO PARA RESPUESTAS
-        // Las RESPUESTAS generan PREGUNTAS CON CONTEXTO
-        // Las PREGUNTAS generan RESPUESTAS SIN CONTEXTO
+        console.log('📝 DEBUG nodePath:', {
+          pathLength: nodePath?.length,
+          fullPath: nodePath?.map(n => `${n.text} (${n.tipo})`).join(' → '),
+          isRoot: nodePath?.length === 1
+        });
+        
+        // Construir contexto del nodo SIEMPRE (para todos los niveles)
+        // El contexto ayuda a la IA a generar respuestas/preguntas más coherentes
         let nodeContext = null;
-        if (nodePath && currentNode && currentNode.tipo === 'respuesta') {
+        if (nodePath && currentNode && nodePath.length > 1) {
+          // Solo enviar contexto si NO es el nodo raíz (nivel 1)
           const pathLength = nodePath.length;
           const rootNode = nodePath[0];
           const parentNode = pathLength > 1 ? nodePath[pathLength - 2] : null;
@@ -540,11 +554,12 @@ const Editor = () => {
             fullPath: nodePath.map(n => n.text),
             firstQuestion: rootNode?.text || '',
             previousQuestion: parentNode?.text || '',
-            currentAnswer: editingText,
-            currentAnswerNote: currentNode.description || ''
+            currentAnswer: currentNode.tipo === 'respuesta' ? editingText : parentNode?.text || '',
+            currentAnswerNote: currentNode.tipo === 'respuesta' ? (currentNode.description || '') : (parentNode?.description || '')
           };
           
-          console.log('📍 CONTEXTO DETECTADO - Nodo tipo respuesta (generando preguntas):', {
+          console.log('📍 CONTEXTO DETECTADO:', {
+            nodeType: currentNode.tipo,
             pathLength: nodeContext.pathLength,
             fullPath: nodeContext.fullPath,
             firstQuestion: nodeContext.firstQuestion,
@@ -552,7 +567,7 @@ const Editor = () => {
             currentAnswer: nodeContext.currentAnswer
           });
         } else {
-          console.log('⚪ No context needed - Generating answers from question (no context required)');
+          console.log('⚪ No context (Root node - Level 1)');
         }
         
         // Llamar a la API real con el tipo de nodo y contexto opcional
@@ -567,8 +582,9 @@ const Editor = () => {
 
         const positions = calculateChildrenPositions(currentNode, responses.length, state.tree);
 
-        // Calcular el tipo de los hijos
-        const childType = getChildTipo(currentNode.tipo);
+        // Calcular el tipo de los hijos basado en tipo del padre y profundidad
+        const pathLength = nodePath?.length || 0;
+        const childType = getChildTipo(currentNode.tipo, pathLength);
 
         const childrenNodes = responses.map((response, index) => {
           const position = positions[index];

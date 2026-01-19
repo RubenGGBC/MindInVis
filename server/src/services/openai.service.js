@@ -92,12 +92,14 @@ class OpenAIService {
         promptType = 'basic';
 
       } else if (nodeTipo === 'respuesta') {
-        // ANSWER → QUESTIONS (with context if available)
+        // ANSWER → QUESTIONS (always with context, even if minimal)
         console.log(`  → Generating QUESTIONS from an ANSWER`);
 
+        // Always use suggested-llm to ensure questions are generated
+        promptType = 'suggested-llm';
+        
         if (nodeContextData && nodeContextData.pathLength >= 1) {
-          // We have context: use full context to generate intelligent follow-up questions
-          promptType = 'suggested-llm';
+          // We have full context: use it to generate intelligent follow-up questions
           options = {
             answerLabel: nodeContextData.currentAnswer,
             answerNote: nodeContextData.currentAnswerNote,
@@ -114,9 +116,15 @@ class OpenAIService {
           console.log(`  • Current Answer (L${nodeContextData.pathLength}): "${nodeContextData.currentAnswer}"`);
           console.log(`  • Prompt Type: ${promptType} <- CONTEXTUAL QUESTIONS`);
         } else {
-          // No context: basic exploratory questions
-          console.log(`  → No context available, using basic exploratory questions`);
-          promptType = 'basic';
+          // No context provided: use minimal context (just the answer itself)
+          console.log(`  → No context available, using answer text as minimal context`);
+          options = {
+            answerLabel: nodeText,
+            answerNote: '',
+            previousQuestion: nodeText, // Use answer as context
+            firstQuestion: nodeText,
+            fullPath: [nodeText]
+          };
         }
       } else {
         console.log(`  Unknown type: ${nodeTipo}, using basic`);

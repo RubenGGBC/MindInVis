@@ -31,6 +31,9 @@
     "npm": ">=9.0.0"
   },
   "dependencies": {
-    "@xyflow/react": "^12.10.0"
+    "@langchain/core": "^1.1.13",
+    "@xyflow/react": "^12.10.0",
+    "langchain": "^1.2.8",
+    "pdf-parse": "^1.1.1"
   }
 }

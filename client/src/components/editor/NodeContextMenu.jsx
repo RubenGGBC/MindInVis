@@ -1,12 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { toast } from 'react-hot-toast';
 import './NodeContextMenu.css';
 import uploadService from '../../services/UploadService';
+import LoadingOverlay from './LoadingOverlay';
 
 const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange, onSummarize, onToggleCollapse }) => {
   const menuRef = useRef(null);
   const pdfInputRef = useRef(null);
   const [activeTab, setActiveTab] = useState('style');
   const [uploading, setUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [compacting, setCompacting] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const [styles, setStyles] = useState({
     backgroundColor: node.backgroundColor,
@@ -48,10 +53,17 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
   };
 
   const handleSummarize = () => {
+    setCompacting(true);
+    setLoadingMessage('🤖 Compacting nodes with AI...');
+    toast.loading('🤖 Starting node compaction...', { id: 'compact' });
     if (onSummarize) {
       onSummarize(node);
     }
-    onClose();
+    setTimeout(() => {
+      setCompacting(false);
+      setLoadingMessage('');
+      onClose();
+    }, 1000);
   };
 
   const handleToggleCollapse = () => {
@@ -66,17 +78,38 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
     if (!file) return;
 
     setUploading(true);
+    setUploadSuccess(false);
+    setLoadingMessage(`📄 Uploading "${file.name}"...`);
+    toast.loading(`📄 Uploading "${file.name}"...`, { id: 'upload-pdf' });
+    
     try {
       const result = await uploadService.uploadSingleFile(file);
       console.log('✅ PDF uploaded successfully:', result);
+      setUploadSuccess(true);
+      setLoadingMessage('✅ PDF uploaded successfully');
+      toast.success(`✅ PDF "${file.name}" uploaded successfully`, { 
+        id: 'upload-pdf',
+        duration: 3000 
+      });
+      
       if (pdfInputRef.current) {
         pdfInputRef.current.value = '';
       }
-      onClose();
+      setTimeout(() => {
+        setUploadSuccess(false);
+        setUploading(false);
+        setLoadingMessage('');
+        onClose();
+      }, 1500);
     } catch (error) {
       console.error('❌ Upload error:', error);
-    } finally {
+      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
+      toast.error(`❌ Error uploading PDF: ${errorMessage}`, { 
+        id: 'upload-pdf',
+        duration: 5000 
+      });
       setUploading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -104,8 +137,8 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
   };
 
   const menuStyle = {
-    left: `${(nodePosition?.x || 0) + (node.width || 200) / 2 - 160}px`,
-    top: `${(nodePosition?.y || 0) + (node.height || 80) + 10}px`
+    left: `${(nodePosition?.x || 0) + (node.width || 200) + 10}px`,
+    top: `${(nodePosition?.y || 0)}px`
   };
 
   return (
@@ -116,13 +149,13 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
             className={`tab-button ${activeTab === 'style' ? 'active' : ''}`}
             onClick={() => setActiveTab('style')}
           >
-            Estilo
+            Style
           </button>
           <button
             className={`tab-button ${activeTab === 'actions' ? 'active' : ''}`}
             onClick={() => setActiveTab('actions')}
           >
-            Acciones
+            Actions
           </button>
         </div>
         <button className="close-button" onClick={onClose}>×</button>
@@ -239,31 +272,11 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
       {activeTab === 'actions' && (
         <div className="context-menu-content">
           <div className="actions-section">
-            {node.children && node.children.length > 0 && (
-              <button
-                className="action-button collapse-button"
-                onClick={handleToggleCollapse}
-              >
-                <span className="action-icon">{node.collapsed ? '▶' : '▼'}</span>
-                <span className="action-text">
-                  {node.collapsed ? 'Mostrar Hijos' : 'Esconder Hijos'}
-                </span>
-              </button>
-            )}
-
-            {node.children && node.children.length > 1 && onSummarize && (
-              <button
-                className="action-button summarize-button"
-                onClick={handleSummarize}
-              >
-                <span className="action-icon">≡</span>
-                <span className="action-text">Resumir Nodos Hijos</span>
-              </button>
-            )}
-
-            <label className="action-button pdf-button" htmlFor="pdf-upload">
-              <span className="action-icon">📄</span>
-              <span className="action-text">{uploading ? 'Subiendo...' : 'Subir PDF'}</span>
+            <label className={`action-button pdf-button ${uploading ? 'uploading' : ''} ${uploadSuccess ? 'success' : ''}`} htmlFor="pdf-upload">
+              <span className="action-icon">{uploadSuccess ? '✓' : '📄'}</span>
+              <span className="action-text">
+                {uploading ? 'Uploading...' : uploadSuccess ? 'PDF Uploaded!' : 'Upload PDF'}
+              </span>
               <input
                 ref={pdfInputRef}
                 id="pdf-upload"
@@ -274,9 +287,32 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
                 style={{ display: 'none' }}
               />
             </label>
+
+            <button
+              className="action-button collapse-button"
+              onClick={handleToggleCollapse}
+              disabled={!node.children || node.children.length === 0}
+            >
+              <span className="action-icon">{node.collapsed ? '▶' : '▼'}</span>
+              <span className="action-text">
+                {node.collapsed ? 'Show Children' : 'Hide Children'}
+              </span>
+            </button>
+
+            <button
+              className={`action-button summarize-button ${compacting ? 'compacting' : ''}`}
+              onClick={handleSummarize}
+              disabled={!node.children || node.children.length <= 1 || !onSummarize || compacting}
+            >
+              <span className="action-icon">{compacting ? '⏳' : '≡'}</span>
+              <span className="action-text">
+                {compacting ? 'Compacting...' : 'Summarize Child Nodes'}
+              </span>
+            </button>
           </div>
         </div>
       )}
+      <LoadingOverlay message={loadingMessage} show={uploading || compacting} />
     </div>
   );
 };

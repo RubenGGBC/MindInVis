@@ -47,7 +47,7 @@ const ReactFlowNode = ({ data }) => {
   const { node, isEditing, onTextChange, onSubmit, isLoading, onNodeDoubleClick, onNodeClick, onAddChild, onToggleCollapse, onSummarize, onStyleChange, selected } = data;
   const [showPopup, setShowPopup] = useState(false);
   const [showSummarizePopup, setShowSummarizePopup] = useState(false);
-  const [contextMenu, setContextMenu] = useState(null);
+  const [showMenu, setShowMenu] = useState(false);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -87,20 +87,16 @@ const ReactFlowNode = ({ data }) => {
     setShowSummarizePopup(false);
   };
 
-  const handleContextMenu = (e) => {
-    e.preventDefault();
+  const handleToggleMenu = (e) => {
     e.stopPropagation();
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY
-    });
+    setShowMenu(!showMenu);
   };
 
-  const handleCloseContextMenu = () => {
-    setContextMenu(null);
+  const handleCloseMenu = () => {
+    setShowMenu(false);
   };
 
-  const handleContextSummarize = () => {
+  const handleMenuSummarize = () => {
     setShowSummarizePopup(true);
   };
 
@@ -124,7 +120,6 @@ const ReactFlowNode = ({ data }) => {
       style={nodeStyle}
       onDoubleClick={(e) => onNodeDoubleClick(e, node)}
       onClick={(e) => onNodeClick(e, node)}
-      onContextMenu={handleContextMenu}
     >
       <Handle type="target" position={Position.Left} />
       {isEditing ? (
@@ -151,6 +146,48 @@ const ReactFlowNode = ({ data }) => {
           <div className="node-content">
             {node.text}
           </div>
+          <div className="node-action-buttons">
+            {(node.description || node.source) && (
+              <button
+                className="node-action-btn"
+                onClick={handleTogglePopup}
+                title="Ver Descripción"
+              >
+                ℹ
+              </button>
+            )}
+            {node.children && node.children.length > 0 && (
+              <button
+                className="node-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleCollapse(node);
+                }}
+                title={node.collapsed ? 'Mostrar Hijos' : 'Esconder Hijos'}
+              >
+                {node.collapsed ? '▶' : '▼'}
+              </button>
+            )}
+            {node.children && node.children.length > 1 && onSummarize && (
+              <button
+                className="node-action-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowSummarizePopup(true);
+                }}
+                title="Resumir Hijos"
+              >
+                ≡
+              </button>
+            )}
+            <button
+              className="node-action-btn node-menu-btn"
+              onClick={handleToggleMenu}
+              title="Opciones"
+            >
+              ⚙
+            </button>
+          </div>
         </div>
       )}
       {showPopup && (node.description || node.source) && (
@@ -166,20 +203,20 @@ const ReactFlowNode = ({ data }) => {
           onClose={() => setShowSummarizePopup(false)}
         />
       )}
+      {showMenu && createPortal(
+        <NodeContextMenu
+          node={node}
+          position={null}
+          nodePosition={{ x: node.x, y: node.y }}
+          onClose={handleCloseMenu}
+          onStyleChange={onStyleChange}
+          onSummarize={handleMenuSummarize}
+          onToggleCollapse={onToggleCollapse}
+        />,
+        document.body
+      )}
       <Handle type="source" position={Position.Right} />
     </div>
-    {contextMenu && createPortal(
-      <NodeContextMenu
-        node={node}
-        position={contextMenu}
-        nodePosition={{ x: node.x, y: node.y }}
-        onClose={handleCloseContextMenu}
-        onStyleChange={onStyleChange}
-        onSummarize={handleContextSummarize}
-        onToggleCollapse={onToggleCollapse}
-      />,
-      document.body
-    )}
     </>
   );
 };

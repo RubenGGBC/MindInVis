@@ -3,9 +3,15 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Load environment variables FIRST
-dotenv.config();
+// Setup for __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from root .env
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 // Validate required environment variables
 if (!process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY === 'tu-key-aqui') {
@@ -30,8 +36,11 @@ const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(helmet()); // Security headers
+
+// Configure CORS to accept multiple origins
+const corsOrigins = (process.env.CORS_ORIGIN || 'http://localhost:5173').split(',').map(o => o.trim());
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+  origin: corsOrigins,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
