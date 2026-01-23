@@ -25,7 +25,7 @@ class OpenAIService {
     try {
       console.log('\n' + ''.repeat(80));
       console.log('GENERATE NODES - Entry Point');
-      console.log('.repeat(80));
+      console.log('═'.repeat(80));
       console.log(`Input:`);
       console.log(`  • Node Text: "${nodeText}"`);
       console.log(`  • Node Type: ${nodeTipo}`);
@@ -62,7 +62,7 @@ class OpenAIService {
     try {
       console.log('\n' + ''.repeat(80));
       console.log('GENERATE NODES WITH PROMPT BUILDER');
-      console.log('.repeat(80));
+      console.log('═'.repeat(80));
       console.log(`Input Parameters:`);
       console.log(`  • Text: "${nodeText}"`);
       console.log(`  • Parent Type: ${nodeTipo}`);
@@ -196,13 +196,13 @@ class OpenAIService {
           source: nodes[0].source
         });
       }
-      console.log('.repeat(80) + '\n');
+      console.log('═'.repeat(80) + '\n');
 
       return { nodes };
     } catch (error) {
       console.error('PromptBuilder generation error:', error);
       console.error('Stack:', error.stack);
-      console.log('.repeat(80) + '\n');
+      console.log('═'.repeat(80) + '\n');
       throw error;
     }
   }
@@ -364,45 +364,6 @@ class OpenAIService {
     return nodes.slice(0, count);
   }
 
-  _buildPrompt(nodeText, nodeTipo, count) {
-    if (nodeTipo === 'pregunta' || nodeTipo === 'root') {
-      return [
-        new SystemMessage('Eres un asistente de mind mapping que ayuda a explorar temas a través de pensamiento estructurado. Genera respuestas concisas y específicas.'),
-        new HumanMessage(`Genera ${count} respuestas concisas y distintas a la siguiente pregunta:
-
-"${nodeText}"
-
-Requisitos:
-- Cada respuesta debe tener máximo 5-15 palabras
-- Las respuestas deben explorar diferentes aspectos o perspectivas
-- Hazlas específicas y accionables
-- Devuelve SOLO las respuestas, una por línea, sin numeración ni viñetas
-- Usa español si la pregunta está en español, inglés si está en inglés
-
-Formato: Una respuesta por línea`)
-      ];
-    } else if (nodeTipo === 'respuesta') {
-      return [
-        new SystemMessage('Eres un asistente de mind mapping que ayuda a profundizar la exploración mediante preguntas. Genera preguntas provocadoras de seguimiento.'),
-        new HumanMessage(`Basándote en la siguiente afirmación o respuesta:
-
-"${nodeText}"
-
-Genera ${count} preguntas de seguimiento que exploren este tema más profundamente.
-
-Requisitos:
-- Cada pregunta debe tener máximo 5-15 palabras
-- Las preguntas deben explorar diferentes ángulos (por qué, cómo, qué pasaría si, consecuencias, etc.)
-- Hazlas provocadoras y específicas
-- Devuelve SOLO las preguntas, una por línea, sin numeración ni viñetas
-- Usa español si la afirmación está en español, inglés si está en inglés
-
-Formato: Una pregunta por línea`)
-      ];
-    } else {
-      throw new Error(`Unknown node type: ${nodeTipo}`);
-    }
-  }
 
   _parseResponse(aiResponse) {
     if (!aiResponse || typeof aiResponse !== 'string') {
@@ -434,13 +395,13 @@ Formato: Una pregunta por línea`)
       switch(type) {
         case 'basic':
           console.log('\nBASIC PROMPT (no context)');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
           console.log(' Simple prompt - just the question');
           break;
         case 'pdf':
           console.log('\nPDF PROMPT (RAG-Enhanced)');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           
           if (options.pdfChunks && options.pdfChunks.length > 0) {
             console.log(`Using ${options.pdfChunks.length} PDF chunks as context`);
@@ -464,7 +425,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'aggregation':
           console.log('\nAGGREGATION PROMPT');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           console.log(`Clustering ${options.nodes?.length || 0} nodes into ${options.clusterCount || 3} groups`);
           prompt = PromptBuilder.getPromptForSummarizationAnswers(
             question,
@@ -474,7 +435,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'summarization-questions':
           console.log('\nSUMMARIZATION QUESTIONS PROMPT');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           prompt = PromptBuilder.getPromptForSummarizationQuestions(
             question,
             options.nodes || [],
@@ -483,7 +444,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-model':
           console.log('\nSUGGESTED MODEL PROMPT (with full context)');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
@@ -502,7 +463,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-logs':
           console.log('\nSUGGESTED LOGS PROMPT (with history)');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
@@ -521,7 +482,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-llm':
           console.log('\nSUGGESTED LLM PROMPT (with full context - KEY FEATURE)');
-          console.log('.repeat(80));
+          console.log('═'.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Parent Question (Level ${options.fullPath?.length - 1 || '?'}): "${options.previousQuestion}"`);
@@ -542,9 +503,9 @@ Formato: Una pregunta por línea`)
       }
 
       console.log('\nFULL PROMPT BEING SENT TO LLM:');
-      console.log('.repeat(80));
+      console.log('═'.repeat(80));
       console.log(prompt);
-      console.log('.repeat(80));
+      console.log('═'.repeat(80));
       console.log('\nInvoking LLM...\n');
 
       const messages = [

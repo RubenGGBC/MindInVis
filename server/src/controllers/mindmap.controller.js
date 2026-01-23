@@ -395,7 +395,7 @@ export const generateNodes = async (req, res, next) => {
 
     console.log('\n' + ''.repeat(80));
     console.log(' POST /api/mindmap/generate-nodes');
-    console.log('.repeat(80));
+    console.log('═'.repeat(80));
     console.log(`Request Parameters:`);
     console.log(`  • Node Text: "${nodeText}"`);
     console.log(`  • Node Type: ${nodeTipo}`);
@@ -420,7 +420,7 @@ export const generateNodes = async (req, res, next) => {
     const result = await openaiService.generateNodes(nodeText, nodeTipo, count, nodeContext, documentId);
 
     console.log(`\n Successfully generated ${result.nodes.length} nodes`);
-    console.log('.repeat(80) + '\n');
+    console.log('═'.repeat(80) + '\n');
 
     // Success response
     res.json({
