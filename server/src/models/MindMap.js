@@ -58,6 +58,11 @@ const mindMapSchema = new mongoose.Schema(
       type: Number,
       default: 1
     },
+    documentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Document',
+      default: null
+    },
     collaborators: [
       {
         user: {

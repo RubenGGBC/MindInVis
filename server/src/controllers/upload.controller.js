@@ -2,6 +2,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import pdfService from '../services/pdf.service.js';
+import MindMap from '../models/MindMap.js';
+
 
 // Get __dirname equivalent in ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -60,7 +63,7 @@ export const uploadFile = async (req, res) => {
       });
     }
 
-    console.log('📁 File uploaded successfully:', {
+    console.log(' File uploaded successfully:', {
       filename: req.file.filename,
       originalname: req.file.originalname,
       size: req.file.size,
@@ -98,7 +101,7 @@ export const uploadMultipleFiles = async (req, res) => {
       });
     }
 
-    console.log(`📁 ${req.files.length} files uploaded successfully`);
+    console.log(`${req.files.length} files uploaded successfully`);
 
     const filesInfo = req.files.map(file => ({
       filename: file.filename,
@@ -122,6 +125,7 @@ export const uploadMultipleFiles = async (req, res) => {
   }
 };
 
+
 // Controller function to delete a file
 export const deleteFile = async (req, res) => {
   try {
@@ -139,7 +143,7 @@ export const deleteFile = async (req, res) => {
     // Delete file
     fs.unlinkSync(filePath);
 
-    console.log('🗑️  File deleted:', filename);
+    console.log('File deleted:', filename);
 
     res.status(200).json({
       success: true,
@@ -153,3 +157,98 @@ export const deleteFile = async (req, res) => {
     });
   }
 };
+
+export const uploadPDF = async (req, res) => {
+  try {
+    console.log(' uploadPDF called - req.file:', req.file ? 'present' : 'missing');
+    console.log(' req.body:', req.body);
+    console.log(' req.user:', req.user);
+
+    if (!req.file) {
+      console.log(' No file uploaded');
+      return res.status(400).json({
+        success: false,
+        error: 'No file uploaded'
+      });
+    }
+
+    console.log(' File received:', {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      path: req.file.path
+    });
+
+    if (req.file.mimetype !== 'application/pdf') {
+      console.log(' Not a PDF file');
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        error: 'Only PDF files are allowed'
+      });
+    }
+
+    const userId = req.user.id;
+    const { mindMapId } = req.body;
+
+    console.log(' userId:', userId);
+    console.log(' mindMapId:', mindMapId);
+
+    if (!mindMapId) {
+      console.log(' mindMapId missing');
+      fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        error: 'mindMapId is required'
+      });
+    }
+
+    console.log(' Processing PDF with RAG:', {
+      filename: req.file.originalname,
+      size: req.file.size,
+      mindMapId
+    });
+
+    const document = await pdfService.processPDF(
+      req.file.path,
+      userId,
+      mindMapId,
+      req.file.originalname
+    );
+
+    console.log(' PDF processed successfully, document ID:', document._id);
+
+    await MindMap.findByIdAndUpdate(mindMapId, {
+      documentId: document._id
+    });
+
+    console.log(` MindMap ${mindMapId} updated with documentId ${document._id}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'PDF processed successfully',
+      document: {
+        id: document._id,
+        filename: document.originalFilename,
+        pages: document.metadata.pages,
+        chunks: document.chunks.length,
+        status: document.status
+      }
+    });
+
+  } catch (error) {
+    console.error(' Error processing PDF:', error);
+    console.error(' Error stack:', error.stack);
+
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(500).json({
+      success: false,
+      error: error.message || 'Failed to process PDF'
+    });
+  }
+}
+
+

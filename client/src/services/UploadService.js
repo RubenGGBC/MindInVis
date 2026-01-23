@@ -4,10 +4,7 @@ class UploadService {
   constructor() {
     this.apiClient = axios.create({
       baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000',
-      timeout: 60000,
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+      timeout: 60000
     });
   }
 
@@ -17,11 +14,7 @@ class UploadService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      };
+      const config = {};
 
       if (onUploadProgress) {
         config.onUploadProgress = (progressEvent) => {
@@ -54,11 +47,7 @@ class UploadService {
         formData.append('files', file);
       });
 
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      };
+      const config = {};
 
       if (onUploadProgress) {
         config.onUploadProgress = (progressEvent) => {
@@ -72,13 +61,13 @@ class UploadService {
       const response = await this.apiClient.post('/upload/multiple', formData, config);
 
       if (response.data.success) {
-        console.log(`✅ ${response.data.files.length} files uploaded successfully`);
+        console.log(` ${response.data.files.length} files uploaded successfully`);
         return response.data.files;
       }
 
       throw new Error('Upload failed');
     } catch (error) {
-      console.error('❌ Upload error:', error);
+      console.error(' Upload error:', error);
       throw error;
     }
   }
@@ -88,13 +77,13 @@ class UploadService {
       const response = await this.apiClient.delete(`/upload/${filename}`);
 
       if (response.data.success) {
-        console.log('🗑️  File deleted successfully:', filename);
+        console.log('  File deleted successfully:', filename);
         return response.data;
       }
 
       throw new Error('Delete failed');
     } catch (error) {
-      console.error('❌ Delete error:', error);
+      console.error(' Delete error:', error);
       throw error;
     }
   }

@@ -23,7 +23,7 @@ const UploadExample = () => {
   // Upload single file
   const handleSingleUpload = async () => {
     if (!selectedFile) {
-      alert('Por favor selecciona un archivo');
+      alert('Please select a file');
       return;
     }
 
@@ -40,8 +40,8 @@ const UploadExample = () => {
       );
 
       setUploadedFile(file);
-      alert('¡Archivo subido exitosamente!');
-      console.log('Archivo subido:', file);
+      alert('File uploaded successfully!');
+      console.log('File uploaded:', file);
 
       // Resetear
       setSelectedFile(null);
@@ -57,7 +57,7 @@ const UploadExample = () => {
   // Upload multiple files
   const handleMultipleUpload = async () => {
     if (selectedFiles.length === 0) {
-      alert('Por favor selecciona al menos un archivo');
+      alert('Please select at least one file');
       return;
     }
 
@@ -74,7 +74,7 @@ const UploadExample = () => {
       );
 
       alert(`¡${files.length} archivos subidos exitosamente!`);
-      console.log('Archivos subidos:', files);
+      console.log('Files uploaded:', files);
 
       // Resetear
       setSelectedFiles([]);
@@ -89,14 +89,14 @@ const UploadExample = () => {
 
   // Delete uploaded file
   const handleDeleteFile = async (filename) => {
-    if (!window.confirm('¿Estás seguro de eliminar este archivo?')) {
+    if (!window.confirm('Are you sure you want to delete this file?')) {
       return;
     }
 
     try {
       await uploadService.deleteFile(filename);
       setUploadedFile(null);
-      alert('¡Archivo eliminado exitosamente!');
+      alert('File deleted successfully!');
     } catch (error) {
       console.error('Error al eliminar archivo:', error);
       alert('Error al eliminar el archivo: ' + error.message);
@@ -105,11 +105,11 @@ const UploadExample = () => {
 
   return (
     <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-      <h2>Ejemplo de Upload de Archivos</h2>
+      <h2>File Upload Example</h2>
 
       {/* Single File Upload */}
       <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-        <h3>Subir un solo archivo</h3>
+        <h3>Upload a single file</h3>
         <input
           type="file"
           onChange={handleFileChange}
@@ -117,7 +117,7 @@ const UploadExample = () => {
           style={{ marginBottom: '10px' }}
         />
         {selectedFile && (
-          <p>Archivo seleccionado: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)</p>
+          <p>Selected file: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(2)} KB)</p>
         )}
         <button
           onClick={handleSingleUpload}
@@ -131,7 +131,7 @@ const UploadExample = () => {
             cursor: 'pointer'
           }}
         >
-          {loading ? 'Subiendo...' : 'Subir Archivo'}
+          {loading ? 'Uploading...' : 'Upload File'}
         </button>
 
         {loading && uploadProgress > 0 && (
@@ -144,7 +144,7 @@ const UploadExample = () => {
 
       {/* Multiple Files Upload */}
       <div style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-        <h3>Subir múltiples archivos</h3>
+        <h3>Upload multiple files</h3>
         <input
           type="file"
           multiple
@@ -154,7 +154,7 @@ const UploadExample = () => {
         />
         {selectedFiles.length > 0 && (
           <div>
-            <p>Archivos seleccionados: {selectedFiles.length}</p>
+            <p>Selected files: {selectedFiles.length}</p>
             <ul>
               {selectedFiles.map((file, index) => (
                 <li key={index}>{file.name} ({(file.size / 1024).toFixed(2)} KB)</li>
@@ -174,7 +174,7 @@ const UploadExample = () => {
             cursor: 'pointer'
           }}
         >
-          {loading ? 'Subiendo...' : 'Subir Archivos'}
+          {loading ? 'Uploading...' : 'Upload Files'}
         </button>
 
         {loading && uploadProgress > 0 && (
@@ -188,12 +188,12 @@ const UploadExample = () => {
       {/* Uploaded File Info */}
       {uploadedFile && (
         <div style={{ padding: '20px', border: '1px solid #4CAF50', borderRadius: '8px', backgroundColor: '#f0f9ff' }}>
-          <h3>Archivo Subido</h3>
-          <p><strong>Nombre original:</strong> {uploadedFile.originalname}</p>
-          <p><strong>Nombre en servidor:</strong> {uploadedFile.filename}</p>
-          <p><strong>Tamaño:</strong> {(uploadedFile.size / 1024).toFixed(2)} KB</p>
-          <p><strong>Tipo:</strong> {uploadedFile.mimetype}</p>
-          <p><strong>URL:</strong> <a href={uploadService.getFileUrl(uploadedFile.filename)} target="_blank" rel="noopener noreferrer">Ver archivo</a></p>
+          <h3>Uploaded File</h3>
+          <p><strong>Original name:</strong> {uploadedFile.originalname}</p>
+          <p><strong>Filename on server:</strong> {uploadedFile.filename}</p>
+          <p><strong>Size:</strong> {(uploadedFile.size / 1024).toFixed(2)} KB</p>
+          <p><strong>Type:</strong> {uploadedFile.mimetype}</p>
+          <p><strong>URL:</strong> <a href={uploadService.getFileUrl(uploadedFile.filename)} target="_blank" rel="noopener noreferrer">View file</a></p>
 
           <button
             onClick={() => handleDeleteFile(uploadedFile.filename)}
@@ -207,33 +207,33 @@ const UploadExample = () => {
               marginTop: '10px'
             }}
           >
-            Eliminar Archivo
+            Delete File
           </button>
         </div>
       )}
 
       {/* Usage Instructions */}
       <div style={{ marginTop: '30px', padding: '15px', backgroundColor: '#fffbea', borderRadius: '8px' }}>
-        <h4>Cómo usar en tu código:</h4>
+        <h4>How to use in your code:</h4>
         <pre style={{ backgroundColor: '#f5f5f5', padding: '10px', borderRadius: '4px', overflow: 'auto' }}>
 {`import uploadService from '../services/UploadService';
 
-// Subir un archivo
+// Upload a file
 const file = await uploadService.uploadSingleFile(
   fileObject,
   (progress) => console.log(progress)
 );
 
-// Subir múltiples archivos
+// Upload multiple files
 const files = await uploadService.uploadMultipleFiles(
   filesArray,
   (progress) => console.log(progress)
 );
 
-// Eliminar un archivo
+// Delete a file
 await uploadService.deleteFile(filename);
 
-// Obtener URL del archivo
+// Get file URL
 const url = uploadService.getFileUrl(filename);`}
         </pre>
       </div>

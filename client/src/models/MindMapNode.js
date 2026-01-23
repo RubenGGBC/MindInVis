@@ -1,31 +1,38 @@
 class MindMapNode {
-  constructor(id, text, x, y, tipo, description = '', source = '') {
-    // Identificación y contenido
+  constructor(id, text, x, y, type, description = '', source = '', citation = null) {
+    // Identification and content
     this.id = id;
     this.text = text;
-    this.tipo = tipo;
+    this.type = type;
     this.description = description;
     this.source = source;
+    this.citation = citation;
 
-    // Posición
+    // User feedback
+    this.feedback = {
+      message: '',
+      rating: null // 0-4, null if no rating
+    };
+
+    // Position
     this.x = x;
     this.y = y;
     this.initialX = x;
     this.initialY = y;
 
-    // Dimensiones y estilo
+    // Dimensions and style
     this.width = 200;
     this.height = 80;
     this.fontSize = 16;
 
-    // Asignar colores basados en tipo y configuración guardada
-    if (tipo === 'pregunta') {
-      this.backgroundColor = localStorage.getItem('mindinvis_pregunta_bg') || '#1e3a8a';
-      this.borderColor = localStorage.getItem('mindinvis_pregunta_border') || '#3b82f6';
-    } else if (tipo === 'respuesta') {
-      this.backgroundColor = localStorage.getItem('mindinvis_respuesta_bg') || '#065f46';
-      this.borderColor = localStorage.getItem('mindinvis_respuesta_border') || '#10b981';
-    } else if (tipo === 'root') {
+    // Assign colors based on type and saved configuration
+    if (type === 'question') {
+      this.backgroundColor = localStorage.getItem('mindinvis_question_bg') || '#1e3a8a';
+      this.borderColor = localStorage.getItem('mindinvis_question_border') || '#3b82f6';
+    } else if (type === 'answer') {
+      this.backgroundColor = localStorage.getItem('mindinvis_answer_bg') || '#065f46';
+      this.borderColor = localStorage.getItem('mindinvis_answer_border') || '#10b981';
+    } else if (type === 'root') {
       this.backgroundColor = '#581c87';
       this.borderColor = '#8b5cf6';
     } else {
@@ -34,10 +41,10 @@ class MindMapNode {
     }
     this.borderWidth = 2;
 
-    // Relaciones (sin referencia parent para evitar circularidad)
+    // Relations (no parent reference to avoid circularity)
     this.children = [];
 
-    // Metadatos
+    // Metadata
     this.collapsed = false;
     this.hasGeneratedChildren = false;
     this.createdAt = Date.now();
@@ -45,16 +52,16 @@ class MindMapNode {
   }
 
   /**
-   * Crea un nodo hijo con posición relativa
-   * NOTA: No mantiene referencia parent para evitar referencias circulares
+   * Creates a child node with relative position
+   * NOTE: Does not maintain parent reference to avoid circular references
    */
-  createChild(text, offsetX, offsetY, tipo, description = '', source = '') {
+  createChild(text, offsetX, offsetY, type, description = '', source = '') {
     const childNode = new MindMapNode(
       `node-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       text,
       this.x + offsetX,
       this.y + offsetY,
-      tipo,
+      type,
       description,
       source
     );
@@ -62,7 +69,7 @@ class MindMapNode {
   }
 
   /**
-   * Añade un nodo hijo existente a este nodo
+   * Adds an existing child node to this node
    */
   addChild(childNode) {
     this.children.push(childNode);
@@ -71,15 +78,17 @@ class MindMapNode {
   }
 
   /**
-   * Serializa el nodo a JSON para guardar/persistir
+   * Serializes the node to JSON for saving/persisting
    */
   toJSON() {
     return {
       id: this.id,
       text: this.text,
-      tipo: this.tipo,
+      type: this.type,
       description: this.description,
       source: this.source,
+      citation: this.citation,
+      feedback: this.feedback,
       x: this.x,
       y: this.y,
       initialX: this.initialX,
@@ -99,10 +108,10 @@ class MindMapNode {
   }
 
   /**
-   * Deserializa un nodo desde JSON con validación
+   * Deserializes a node from JSON with validation
    */
   static fromJSON(data) {
-    // Validación de datos requeridos
+    // Validate required data
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid node data: must be an object');
     }
@@ -119,37 +128,47 @@ class MindMapNode {
       throw new Error('Invalid node data: x and y must be numbers');
     }
 
-    // Crear nodo con valores validados
+    // Create node with validated values
+    // Support both 'type' and 'tipo' for backwards compatibility
+    const nodeType = data.type || data.tipo || 'question';
     const node = new MindMapNode(
       data.id,
       data.text,
       data.x,
       data.y,
-      data.tipo || 'pregunta',
+      nodeType,
       data.description || '',
-      data.source || ''
+      data.source || '',
+      data.citation || null
     );
 
-    // Restaurar posiciones iniciales
+    // Restore initial positions
     node.initialX = typeof data.initialX === 'number' ? data.initialX : data.x;
     node.initialY = typeof data.initialY === 'number' ? data.initialY : data.y;
 
-    // Restaurar propiedades visuales con valores por defecto
+    // Restore visual properties with default values
     node.width = typeof data.width === 'number' && data.width > 0 ? data.width : 200;
     node.height = typeof data.height === 'number' && data.height > 0 ? data.height : 80;
     node.fontSize = typeof data.fontSize === 'number' && data.fontSize > 0 ? data.fontSize : 16;
-    // Use constructor-assigned defaults when stored data doesn't include colors
     node.backgroundColor = typeof data.backgroundColor === 'string' ? data.backgroundColor : node.backgroundColor;
     node.borderColor = typeof data.borderColor === 'string' ? data.borderColor : node.borderColor;
     node.borderWidth = typeof data.borderWidth === 'number' && data.borderWidth >= 0 ? data.borderWidth : 2;
 
-    // Restaurar metadatos
+    // Restore feedback
+    if (data.feedback && typeof data.feedback === 'object') {
+      node.feedback = {
+        message: typeof data.feedback.message === 'string' ? data.feedback.message : '',
+        rating: typeof data.feedback.rating === 'number' ? data.feedback.rating : null
+      };
+    }
+
+    // Restore metadata
     node.collapsed = Boolean(data.collapsed);
     node.hasGeneratedChildren = Boolean(data.hasGeneratedChildren);
     node.createdAt = typeof data.createdAt === 'number' ? data.createdAt : Date.now();
     node.lastModified = typeof data.lastModified === 'number' ? data.lastModified : Date.now();
 
-    // Restaurar hijos recursivamente con manejo de errores
+    // Recursively restore children with error handling
     if (Array.isArray(data.children)) {
       node.children = data.children
         .map((childData, index) => {
@@ -167,7 +186,7 @@ class MindMapNode {
   }
 
   /**
-   * Clona este nodo (shallow - sin hijos)
+   * Clones this node (shallow - without children)
    */
   clone() {
     const cloned = new MindMapNode(
@@ -175,11 +194,13 @@ class MindMapNode {
       this.text,
       this.x,
       this.y,
-      this.tipo,
+      this.type,
       this.description,
-      this.source
+      this.source,
+      this.citation
     );
 
+    cloned.feedback = { ...this.feedback };
     cloned.initialX = this.initialX;
     cloned.initialY = this.initialY;
     cloned.width = this.width;
@@ -195,7 +216,7 @@ class MindMapNode {
   }
 
   /**
-   * Clona este nodo y todos sus hijos (deep clone)
+   * Clones this node and all its children (deep clone)
    */
   deepClone() {
     const cloned = this.clone();

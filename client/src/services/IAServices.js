@@ -12,21 +12,31 @@ class IAService {
   }
 
 
-  async generateNodes(nodeText, nodeTipo, count = 3, nodeContext = null) {
+  async generateNodes(nodeText, nodeTipo, count = 3, nodeContext = null, documentId = null) {
     try {
+      // Map English types to Spanish for API compatibility
+      const typeMap = {
+        'question': 'pregunta',
+        'answer': 'respuesta',
+        'root': 'root'
+      };
+      const mappedTipo = typeMap[nodeTipo] || nodeTipo;
+
       const response = await this.apiClient.post('/mindmap/generate-nodes', {
         nodeText,
-        nodeTipo,
+        nodeTipo: mappedTipo,
         count,
-        nodeContext  // Pasar contexto opcional
+        nodeContext,
+        documentId
       });
 
       if (response.data.success && response.data.nodes) {
-        // Devolver objetos completos con texto, descripción y source
+        // Devolver objetos completos con texto, descripción, source y citation
         return response.data.nodes.map(node => ({
           text: node.text,
           description: node.description || '',
-          source: node.source || 'Generado por IA'
+          source: node.source || 'Generado por IA',
+          citation: node.citation || null
         }));
       }
 
@@ -47,9 +57,17 @@ class IAService {
 
   async generateNodeDetail(nodeText, nodeTipo) {
     try {
+      // Map English types to Spanish for API compatibility
+      const typeMap = {
+        'question': 'pregunta',
+        'answer': 'respuesta',
+        'root': 'root'
+      };
+      const mappedTipo = typeMap[nodeTipo] || nodeTipo;
+
       const response = await this.apiClient.post('/mindmap/generate-detail', {
         nodeText,
-        nodeTipo
+        nodeTipo: mappedTipo
       });
 
       if (response.data.success && response.data.description) {

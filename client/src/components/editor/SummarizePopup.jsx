@@ -16,14 +16,14 @@ const SummarizePopup = ({ node, onConfirm, onClose }) => {
     <div className="summarize-popup">
       <button className="popup-close" onClick={onClose}>×</button>
       <div className="popup-content">
-        <h3 className="popup-title">Compactar Nodos Hijos</h3>
+        <h3 className="popup-title">Compact Child Nodes</h3>
         <p className="popup-description">
-          Este nodo tiene <strong>{childrenCount}</strong> hijos.
-          Especifica en cuántos nodos deseas compactarlos:
+          This node has <strong>{childrenCount}</strong> children.
+          Specify into how many nodes you'd like to compact them:
         </p>
         <form onSubmit={handleSubmit}>
           <div className="input-group">
-            <label htmlFor="target-count">Número de nodos:</label>
+            <label htmlFor="target-count">Number of nodes:</label>
             <input
               id="target-count"
               type="number"
@@ -34,19 +34,19 @@ const SummarizePopup = ({ node, onConfirm, onClose }) => {
               autoFocus
             />
             <span className="input-hint">
-              (Mínimo: 2, Máximo: {childrenCount - 1})
+              (Minimum: 2, Maximum: {childrenCount - 1})
             </span>
           </div>
           <div className="popup-actions">
             <button type="button" className="btn-secondary" onClick={onClose}>
-              Cancelar
+              Cancel
             </button>
             <button
               type="submit"
               className="btn-primary"
               disabled={targetCount < 2 || targetCount >= childrenCount}
             >
-              Compactar
+              Compact
             </button>
           </div>
         </form>

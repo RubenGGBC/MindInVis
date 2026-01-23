@@ -55,6 +55,18 @@ const mindMapNodeSchema = new mongoose.Schema(
       type: String,
       default: 'Manual'
     },
+    feedback: {
+      message: {
+        type: String,
+        default: ''
+      },
+      rating: {
+        type: Number,
+        min: 0,
+        max: 4,
+        default: null
+      }
+    },
     collapsed: {
       type: Boolean,
       default: false

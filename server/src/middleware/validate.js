@@ -20,6 +20,22 @@ export const validateGenerateNodes = [
     .withMessage('count must be an integer between 1 and 8')
     .toInt(),
 
+  body('nodeContext')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'object' && !Array.isArray(value)) return true;
+      throw new Error('nodeContext must be an object or null');
+    }),
+
+  body('documentId')
+    .optional({ nullable: true })
+    .custom((value) => {
+      if (value === null || value === undefined) return true;
+      if (typeof value === 'string') return true;
+      throw new Error('documentId must be a string or null');
+    }),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {

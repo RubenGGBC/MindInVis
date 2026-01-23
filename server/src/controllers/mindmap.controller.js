@@ -3,7 +3,6 @@ import openaiService from '../services/openai.service.js';
 import MindMap from '../models/MindMap.js';
 import MindMapNode from '../models/MindMapNode.js';
 
-// ==================== DATABASE OPERATIONS ====================
 
 // Create a new mind map
 export const createMindMap = async (req, res) => {
@@ -236,7 +235,7 @@ export const saveMindMapState = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
-    const { tree, title } = req.body;
+    const { tree, title, documentId } = req.body;
 
     let mindMap = await MindMap.findById(id);
 
@@ -278,6 +277,7 @@ export const saveMindMapState = async (req, res) => {
           borderWidth: node.borderWidth,
           description: node.description,
           source: node.source,
+          feedback: node.feedback || { message: '', rating: null },
           collapsed: node.collapsed,
           hasGeneratedChildren: node.hasGeneratedChildren
         },
@@ -300,12 +300,18 @@ export const saveMindMapState = async (req, res) => {
     if (tree) {
       await saveNodes(tree);
       // Also save the tree structure for easy reconstruction
-      console.log('💾 Saving tree structure to database');
+      console.log(' Saving tree structure to database');
       mindMap.treeStructure = tree;
     }
 
     if (title) {
       mindMap.title = title;
+    }
+
+    // Update documentId (can be null to remove document)
+    if (documentId !== undefined) {
+      mindMap.documentId = documentId;
+      console.log(' Updating documentId:', documentId || 'removed');
     }
 
     // Update edit history
@@ -345,7 +351,7 @@ export const getRecentMindMaps = async (req, res) => {
     const userId = req.user.id;
     const limit = req.query.limit || 5;
 
-    console.log(`\n📊 GET /api/mindmap/recent - User: ${userId}`);
+    console.log(`\n GET /api/mindmap/recent - User: ${userId}`);
 
     const mindMaps = await MindMap.find({ owner: userId })
       .sort({ updatedAt: -1 })
@@ -353,7 +359,7 @@ export const getRecentMindMaps = async (req, res) => {
       .populate('owner', 'name email')
       .populate('rootNode');
 
-    console.log(`✅ Found ${mindMaps.length} recent maps for user ${userId}`);
+    console.log(` Found ${mindMaps.length} recent maps for user ${userId}`);
     mindMaps.forEach((map, idx) => {
       console.log(`  ${idx + 1}. ${map.title} (${map._id}) - Updated: ${map.updatedAt}`);
     });
@@ -378,25 +384,26 @@ export const generateNodes = async (req, res, next) => {
     // Check validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.warn('❌ Validation errors:', errors.array());
+      console.warn(' Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
       });
     }
 
-    const { nodeText, nodeTipo, count = 3, nodeContext } = req.body;
+    const { nodeText, nodeTipo, count = 3, nodeContext, documentId } = req.body;
 
-    console.log('\n' + '═'.repeat(80));
-    console.log('🎯 POST /api/mindmap/generate-nodes');
-    console.log('═'.repeat(80));
+    console.log('\n' + ''.repeat(80));
+    console.log(' POST /api/mindmap/generate-nodes');
+    console.log('.repeat(80));
     console.log(`Request Parameters:`);
     console.log(`  • Node Text: "${nodeText}"`);
     console.log(`  • Node Type: ${nodeTipo}`);
     console.log(`  • Count: ${count}`);
+    console.log(`  • Document ID: ${documentId || 'None'}`);
     
     if (nodeContext) {
-      console.log(`\n✨ CONTEXT RECEIVED (Respuestas con contexto):`);
+      console.log(`\n CONTEXT RECEIVED (Respuestas con contexto):`);
       console.log(`  • Path Length: ${nodeContext.pathLength}`);
       console.log(`  • Full Path: ${nodeContext.fullPath?.join(' → ') || 'N/A'}`);
       console.log(`  • Root (L1): "${nodeContext.firstQuestion}"`);
@@ -404,16 +411,16 @@ export const generateNodes = async (req, res, next) => {
       console.log(`  • Generando respuesta desde: "${nodeContext.currentAnswer}"`);
       console.log(`\n  → PromptBuilder will use CONTEXTUAL prompt`);
     } else {
-      console.log(`\n⚠️  NO CONTEXT (Respuestas básicas)`);
+      console.log(`\n  NO CONTEXT (Respuestas básicas)`);
       console.log(`  → PromptBuilder will use BASIC prompt`);
     }
 
     // Call OpenAI service
-    console.log('\n⏳ Calling OpenAI service...');
-    const result = await openaiService.generateNodes(nodeText, nodeTipo, count, nodeContext);
+    console.log('\n Calling OpenAI service...');
+    const result = await openaiService.generateNodes(nodeText, nodeTipo, count, nodeContext, documentId);
 
-    console.log(`\n✅ Successfully generated ${result.nodes.length} nodes`);
-    console.log('═'.repeat(80) + '\n');
+    console.log(`\n Successfully generated ${result.nodes.length} nodes`);
+    console.log('.repeat(80) + '\n');
 
     // Success response
     res.json({
@@ -427,7 +434,7 @@ export const generateNodes = async (req, res, next) => {
       }
     });
   } catch (error) {
-    console.error('❌ Controller error:', error.message);
+    console.error(' Controller error:', error.message);
     next(error);
   }
 };

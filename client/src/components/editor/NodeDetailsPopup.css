@@ -62,8 +62,28 @@
   font-size: 13px;
   color: #374151;
   line-height: 1.5;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+}
+
+.tooltip-description::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tooltip-description::-webkit-scrollbar-track {
+  background: #f3f4f6;
+  border-radius: 3px;
+}
+
+.tooltip-description::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 3px;
+}
+
+.tooltip-description::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
 .tooltip-source {

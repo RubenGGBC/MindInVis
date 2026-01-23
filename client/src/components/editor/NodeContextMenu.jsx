@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import './NodeContextMenu.css';
-import uploadService from '../../services/UploadService';
+import documentService from '../../services/documentService';
 import LoadingOverlay from './LoadingOverlay';
 
-const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange, onSummarize, onToggleCollapse }) => {
+const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange, onSummarize, onToggleCollapse, mindMapId, onPDFUploaded }) => {
   const menuRef = useRef(null);
   const pdfInputRef = useRef(null);
-  const [activeTab, setActiveTab] = useState('style');
+  const [activeTab, setActiveTab] = useState('actions');
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [compacting, setCompacting] = useState(false);
@@ -75,26 +75,53 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
 
   const handlePDFUpload = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    console.log('handlePDFUpload called, file:', file);
+    if (!file) {
+      console.log('No file selected');
+      return;
+    }
 
-    setUploading(true);
-    setUploadSuccess(false);
-    setLoadingMessage(`📄 Uploading "${file.name}"...`);
-    toast.loading(`📄 Uploading "${file.name}"...`, { id: 'upload-pdf' });
-    
-    try {
-      const result = await uploadService.uploadSingleFile(file);
-      console.log('✅ PDF uploaded successfully:', result);
-      setUploadSuccess(true);
-      setLoadingMessage('✅ PDF uploaded successfully');
-      toast.success(`✅ PDF "${file.name}" uploaded successfully`, { 
-        id: 'upload-pdf',
-        duration: 3000 
-      });
-      
+    console.log('File selected:', { name: file.name, size: file.size, type: file.type });
+
+    if (!mindMapId) {
+      console.error('No mindMapId available');
+      toast.error('Please save your mind map first before uploading a PDF.', { duration: 4000 });
       if (pdfInputRef.current) {
         pdfInputRef.current.value = '';
       }
+      return;
+    }
+
+    console.log('mindMapId:', mindMapId);
+
+    setUploading(true);
+    setUploadSuccess(false);
+    setLoadingMessage(`Processing "${file.name}" with RAG...`);
+    toast.loading(`Processing "${file.name}" with RAG...`, { id: 'upload-pdf' });
+
+    console.log('Calling documentService.uploadPDF...');
+    try {
+      const document = await documentService.uploadPDF(file, mindMapId, (progress) => {
+        console.log(` Upload progress: ${progress}%`);
+        setLoadingMessage(`Processing: ${progress}%`);
+      });
+
+      console.log('PDF processed successfully:', document);
+      setUploadSuccess(true);
+      setLoadingMessage('PDF processed successfully');
+      toast.success(`PDF processed: ${document.chunks} chunks created`, {
+        id: 'upload-pdf',
+        duration: 3000
+      });
+
+      if (pdfInputRef.current) {
+        pdfInputRef.current.value = '';
+      }
+
+      if (typeof onPDFUploaded === 'function') {
+        onPDFUploaded(document.id);
+      }
+
       setTimeout(() => {
         setUploadSuccess(false);
         setUploading(false);
@@ -102,11 +129,11 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
         onClose();
       }, 1500);
     } catch (error) {
-      console.error('❌ Upload error:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Unknown error';
-      toast.error(`❌ Error uploading PDF: ${errorMessage}`, { 
+      console.error('PDF processing error:', error);
+      const errorMessage = error.response?.data?.error || error.message || 'Unknown error';
+      toast.error(`Error processing PDF: ${errorMessage}`, {
         id: 'upload-pdf',
-        duration: 5000 
+        duration: 5000
       });
       setUploading(false);
       setLoadingMessage('');
@@ -137,8 +164,8 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
   };
 
   const menuStyle = {
-    left: `${(nodePosition?.x || 0) + (node.width || 200) + 10}px`,
-    top: `${(nodePosition?.y || 0)}px`
+    left: `${nodePosition?.x || 0}px`,
+    top: `${nodePosition?.y || 0}px`
   };
 
   return (
@@ -146,16 +173,16 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
       <div className="context-menu-header">
         <div className="context-menu-tabs">
           <button
-            className={`tab-button ${activeTab === 'style' ? 'active' : ''}`}
-            onClick={() => setActiveTab('style')}
-          >
-            Style
-          </button>
-          <button
             className={`tab-button ${activeTab === 'actions' ? 'active' : ''}`}
             onClick={() => setActiveTab('actions')}
           >
             Actions
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'style' ? 'active' : ''}`}
+            onClick={() => setActiveTab('style')}
+          >
+            Style
           </button>
         </div>
         <button className="close-button" onClick={onClose}>×</button>
@@ -164,7 +191,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
       {activeTab === 'style' && (
         <div className="context-menu-content">
           <div className="style-section">
-            <label className="style-label">Color de Fondo</label>
+            <label className="style-label">Background Color</label>
             <div className="color-picker-container">
               <input
                 type="color"
@@ -187,7 +214,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
           </div>
 
           <div className="style-section">
-            <label className="style-label">Color de Borde</label>
+            <label className="style-label">Border Color</label>
             <div className="color-picker-container">
               <input
                 type="color"
@@ -211,7 +238,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
 
           <div className="style-section">
             <label className="style-label">
-              Grosor del Borde: {styles.borderWidth}px
+              Border width: {styles.borderWidth}px
             </label>
             <input
               type="range"
@@ -225,7 +252,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
 
           <div className="style-section">
             <label className="style-label">
-              Ancho: {styles.width}px
+              Width: {styles.width}px
             </label>
             <input
               type="range"
@@ -240,7 +267,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
 
           <div className="style-section">
             <label className="style-label">
-              Alto: {styles.height}px
+              Height: {styles.height}px
             </label>
             <input
               type="range"
@@ -255,7 +282,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
 
           <div className="style-section">
             <label className="style-label">
-              Tamaño de Fuente: {styles.fontSize}px
+              Font Size: {styles.fontSize}px
             </label>
             <input
               type="range"
@@ -272,7 +299,11 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
       {activeTab === 'actions' && (
         <div className="context-menu-content">
           <div className="actions-section">
-            <label className={`action-button pdf-button ${uploading ? 'uploading' : ''} ${uploadSuccess ? 'success' : ''}`} htmlFor="pdf-upload">
+            <button
+              className={`action-button pdf-button ${uploading ? 'uploading' : ''} ${uploadSuccess ? 'success' : ''}`}
+              onClick={() => pdfInputRef.current?.click()}
+              disabled={uploading}
+            >
               <span className="action-icon">{uploadSuccess ? '✓' : '📄'}</span>
               <span className="action-text">
                 {uploading ? 'Uploading...' : uploadSuccess ? 'PDF Uploaded!' : 'Upload PDF'}
@@ -286,7 +317,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
                 disabled={uploading}
                 style={{ display: 'none' }}
               />
-            </label>
+            </button>
 
             <button
               className="action-button collapse-button"
@@ -312,6 +343,7 @@ const NodeContextMenu = ({ node, position, nodePosition, onClose, onStyleChange,
           </div>
         </div>
       )}
+
       <LoadingOverlay message={loadingMessage} show={uploading || compacting} />
     </div>
   );

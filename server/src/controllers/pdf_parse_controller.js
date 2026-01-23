@@ -4,7 +4,6 @@ const path = require('path');
 
 async function parsePDF(filePath) {
     if (!filePath) {
-        filePath = './server/uploads/1768386422359-AlmacenajeDatos-MongoDB-2.pdf';
     }
     try {
         const dataBuffer = fs.readFileSync(filePath);

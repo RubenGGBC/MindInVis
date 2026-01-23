@@ -53,3 +53,75 @@
   height: 2rem;
   background: #e5e7eb;
 }
+
+.toolbar-group.pdf-indicator {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  color: white;
+  gap: 0.5rem;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.pdf-icon {
+  color: white;
+}
+
+.pdf-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.pdf-badge {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.pdf-action-btn {
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  min-width: auto;
+}
+
+.pdf-action-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  color: white;
+}
+
+.pdf-action-btn span {
+  display: none;
+}
+
+.pdf-remove-btn {
+  padding: 0.25rem 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: white;
+  min-width: auto;
+}
+
+.pdf-remove-btn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.3);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: white;
+}
+
+.pdf-remove-btn span {
+  display: none;
+}

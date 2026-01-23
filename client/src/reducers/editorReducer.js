@@ -10,7 +10,9 @@ export const ACTIONS = {
   UPDATE_NODE_TEXT: 'UPDATE_NODE_TEXT',
   UPDATE_NODE_POSITION: 'UPDATE_NODE_POSITION',
   UPDATE_NODE_PROPERTY: 'UPDATE_NODE_PROPERTY',
+  UPDATE_NODE_FEEDBACK: 'UPDATE_NODE_FEEDBACK',
   ADD_CHILD: 'ADD_CHILD',
+  ADD_SIBLING_AT_INDEX: 'ADD_SIBLING_AT_INDEX',
   ADD_CHILDREN: 'ADD_CHILDREN',
   REPLACE_CHILDREN: 'REPLACE_CHILDREN',
   DELETE_NODE: 'DELETE_NODE',
@@ -80,11 +82,44 @@ export function editorReducer(state, action) {
       return addToHistory(state, newTree);
     }
 
+    case ACTIONS.UPDATE_NODE_FEEDBACK: {
+      const { nodeId, feedback } = action.payload;
+
+      const newTree = updateNode(state.tree, nodeId, (node) => ({
+        feedback: {
+          message: feedback.message || '',
+          rating: typeof feedback.rating === 'number' ? Math.max(0, Math.min(4, feedback.rating)) : null
+        },
+        lastModified: Date.now()
+      }));
+
+      return addToHistory(state, newTree);
+    }
+
     case ACTIONS.ADD_CHILD: {
       const { parentId, childNode } = action.payload;
       let newTree = addChildToNode(state.tree, parentId, childNode);
 
-      // Recalcular layout dinámico
+      // No recalcular layout - mantener posición manual de los hijos
+      // newTree = applyDynamicLayout(newTree);
+
+      return addToHistory(state, newTree);
+    }
+
+    case ACTIONS.ADD_SIBLING_AT_INDEX: {
+      const { parentId, siblingNode, index } = action.payload;
+
+      let newTree = updateNode(state.tree, parentId, (node) => {
+        const newChildren = [...node.children];
+        // Insertar hermano en el índice específico (antes del nodo de referencia)
+        newChildren.splice(index, 0, siblingNode);
+        return {
+          children: newChildren,
+          lastModified: Date.now()
+        };
+      });
+
+      // Aplicar layout dinámico para recalcular posiciones
       newTree = applyDynamicLayout(newTree);
 
       return addToHistory(state, newTree);
@@ -304,9 +339,19 @@ export const actionCreators = {
     payload: { nodeId, property, value }
   }),
 
+  updateNodeFeedback: (nodeId, feedback) => ({
+    type: ACTIONS.UPDATE_NODE_FEEDBACK,
+    payload: { nodeId, feedback }
+  }),
+
   addChild: (parentId, childNode) => ({
     type: ACTIONS.ADD_CHILD,
     payload: { parentId, childNode }
+  }),
+
+  addSiblingAtIndex: (parentId, siblingNode, index) => ({
+    type: ACTIONS.ADD_SIBLING_AT_INDEX,
+    payload: { parentId, siblingNode, index }
   }),
 
   addChildren: (parentId, childrenNodes) => ({

@@ -1,6 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import PromptBuilder from './PromptBuilder.js';
+import pdfService from './pdf.service.js';
 
 class OpenAIService {
   constructor() {
@@ -20,15 +21,16 @@ class OpenAIService {
     console.log('ChatOpenAI instance created with 30s timeout and 2000 max tokens');
   }
 
-  async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null) {
+  async generateNodes(nodeText, nodeTipo, count = 3, nodeContextData = null, documentId = null) {
     try {
-      console.log('\n' + '═'.repeat(80));
+      console.log('\n' + ''.repeat(80));
       console.log('GENERATE NODES - Entry Point');
-      console.log('═'.repeat(80));
+      console.log('.repeat(80));
       console.log(`Input:`);
       console.log(`  • Node Text: "${nodeText}"`);
       console.log(`  • Node Type: ${nodeTipo}`);
       console.log(`  • Count: ${count}`);
+      console.log(`  • Document ID: ${documentId || 'None'}`);
 
       if (nodeContextData) {
         console.log('\nFULL TRACE CONTEXT:');
@@ -48,8 +50,7 @@ class OpenAIService {
       }
 
       console.log('\nCalling generateNodesWithPromptBuilder...');
-      // Always use structured generation with PromptBuilder to obtain descriptions
-      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData);
+      return this.generateNodesWithPromptBuilder(nodeText, nodeTipo, count, '', nodeContextData, documentId);
     } catch (error) {
       console.error('OpenAI generation error:', error.message);
       console.error('Full error:', error);
@@ -57,16 +58,17 @@ class OpenAIService {
     }
   }
 
-  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '', nodeContextData = null) {
+  async generateNodesWithPromptBuilder(nodeText, nodeTipo, count = 3, description = '', nodeContextData = null, documentId = null) {
     try {
-      console.log('\n' + '═'.repeat(80));
+      console.log('\n' + ''.repeat(80));
       console.log('GENERATE NODES WITH PROMPT BUILDER');
-      console.log('═'.repeat(80));
+      console.log('.repeat(80));
       console.log(`Input Parameters:`);
       console.log(`  • Text: "${nodeText}"`);
       console.log(`  • Parent Type: ${nodeTipo}`);
       console.log(`  • Count: ${count}`);
       console.log(`  • Description: "${description}"`);
+      console.log(`  • Document ID: ${documentId || 'None'}`);
 
       const nodeContext = {
         _styles: {
@@ -77,19 +79,51 @@ class OpenAIService {
       let question = nodeText;
       let promptType = 'basic';
       let options = {};
+      let pdfChunks = null;
+
+      if (documentId) {
+        console.log('\n RAG MODE ENABLED - Searching PDF for relevant context...');
+        console.log(`  • Document ID: ${documentId}`);
+        console.log(`  • Query: "${nodeText}"`);
+        console.log(`  • Requesting top 3 chunks`);
+        try {
+          const chunks = await pdfService.searchRelevantChunks(documentId, nodeText, 3);
+          if (chunks && chunks.length > 0) {
+            console.log(` Found ${chunks.length} relevant chunks from PDF:`);
+            chunks.forEach((chunk, i) => {
+              console.log(`   Chunk ${i + 1}: Page ${chunk.pageNumber}, Similarity: ${chunk.similarity.toFixed(3)}`);
+              console.log(`   Preview: ${chunk.text.substring(0, 100)}...`);
+            });
+            pdfChunks = chunks;
+            options.pdfChunks = chunks;
+          } else {
+            console.log('  No chunks found or empty result');
+          }
+        } catch (pdfError) {
+          console.error(' Failed to retrieve PDF context:', pdfError.message);
+          console.error('   Error stack:', pdfError.stack);
+        }
+      } else {
+        console.log('\n No documentId provided - RAG disabled');
+      }
 
       console.log('\nDetermining Generation Strategy:');
       console.log(`  • Parent Type: ${nodeTipo}`);
 
       // CORRECT FLOW LOGIC:
-      // 1. QUESTION → generate ANSWERS (no context, direct answers)
-      // 2. ANSWER → generate QUESTIONS (with full context for smart questions)
+      // 1. QUESTION → generate ANSWERS (with PDF context if available)
+      // 2. ANSWER → generate QUESTIONS (with full context for smart questions + PDF if available)
 
       if (nodeTipo === 'pregunta') {
-        // QUESTION → ANSWERS (no context, basic answers)
+        // QUESTION → ANSWERS
         console.log(`  → Generating ANSWERS from a QUESTION`);
-        console.log(`  → Using basic prompt (no context needed for answers)`);
-        promptType = 'basic';
+        if (pdfChunks && pdfChunks.length > 0) {
+          console.log(`  → Using PDF prompt with RAG context`);
+          promptType = 'pdf';
+        } else {
+          console.log(`  → Using basic prompt (no PDF context)`);
+          promptType = 'basic';
+        }
 
       } else if (nodeTipo === 'respuesta') {
         // ANSWER → QUESTIONS (always with context, even if minimal)
@@ -154,7 +188,7 @@ class OpenAIService {
         hasParseError: !!result.parseError
       });
 
-      const nodes = this._extractNodesFromStructuredResponse(result, count);
+      const nodes = this._extractNodesFromStructuredResponse(result, count, pdfChunks);
       console.log(`Extracted ${nodes.length} nodes`);
       if (nodes.length > 0) {
         console.log('First node sample:', {
@@ -162,13 +196,13 @@ class OpenAIService {
           source: nodes[0].source
         });
       }
-      console.log('═'.repeat(80) + '\n');
+      console.log('.repeat(80) + '\n');
 
       return { nodes };
     } catch (error) {
       console.error('PromptBuilder generation error:', error);
       console.error('Stack:', error.stack);
-      console.log('═'.repeat(80) + '\n');
+      console.log('.repeat(80) + '\n');
       throw error;
     }
   }
@@ -192,6 +226,42 @@ class OpenAIService {
         { nodes: formattedNodes, clusterCount }
       );
 
+      // Enrich cluster descriptions with information about merged nodes
+      if (result.clusters && Array.isArray(result.clusters)) {
+        result.clusters = result.clusters.map(cluster => {
+          const clusterItems = cluster.clusteredItems || [];
+          const itemCount = clusterItems.length;
+
+          // Build a summary of what was merged with detailed information
+          let mergedInfo = '\n\n========================================\n';
+          mergedInfo += 'Original content (' + itemCount + ' nodes summarized):\n';
+          mergedInfo += '========================================\n';
+
+          clusterItems.forEach((item, idx) => {
+            const itemTitle = item.node_name || item.title || 'No tittle';
+            const itemDesc = item.description || '';
+
+            mergedInfo += '\n' + (idx + 1) + '. ' + itemTitle;
+
+            // Include original description if available
+            if (itemDesc && itemDesc.trim().length > 0) {
+              // Truncate long descriptions
+              const descPreview = itemDesc.length > 150
+                ? itemDesc.substring(0, 150) + '...'
+                : itemDesc;
+              mergedInfo += '\n   ' + descPreview;
+            }
+          });
+
+          // Add reasoning for grouping based on the original cluster description
+
+          // Enhance the description: put cluster description first, then details
+          cluster.description =   mergedInfo;
+
+          return cluster;
+        });
+      }
+
       return result;
     } catch (error) {
       console.error('Aggregation error:', error);
@@ -199,7 +269,7 @@ class OpenAIService {
     }
   }
 
-  _extractNodesFromStructuredResponse(result, count) {
+  _extractNodesFromStructuredResponse(result, count, pdfChunks = null) {
     const nodes = [];
 
     if (result.parseError) {
@@ -257,9 +327,27 @@ class OpenAIService {
           const node = {
             text,
             description,
-            source: excerpt ? 'PDF Extract' : 'OpenAI GPT-3.5'
+            source: excerpt ? 'PDF Extract' : 'OpenAI GPT-4o'
           };
-          if (excerpt) node.excerpt = excerpt;
+
+          // Si hay excerpt del PDF, agregarlo a la descripción
+          if (excerpt) {
+            node.excerpt = excerpt;
+            node.description = `${description}\n\n📄 Extracto del PDF:\n"${excerpt}"`;
+          }
+
+          // Si hay chunks del PDF, agregar la referencia a la descripción
+          if (pdfChunks && pdfChunks.length > 0) {
+            const mostRelevantChunk = pdfChunks[0];
+            node.source = `PDF - Página ${mostRelevantChunk.pageNumber}`;
+            
+            // Agregar la cita al final de la descripción
+            const citation = `\n\n📖 Fuente: Página ${mostRelevantChunk.pageNumber}\n"${mostRelevantChunk.text.substring(0, 150)}..."`;
+            node.description = node.description ? node.description + citation : citation;
+            
+            console.log(`  Added citation from page ${mostRelevantChunk.pageNumber} to description`);
+          }
+
           nodes.push(node);
         }
       });
@@ -335,9 +423,9 @@ Formato: Una pregunta por línea`)
 
   async generateStructuredNodes(nodeContext, question, type = 'basic', options = {}) {
     try {
-      console.log(`\n${'═'.repeat(80)}`);
+      console.log(`\n${''.repeat(80)}`);
       console.log(`GENERATING STRUCTURED NODES (type: ${type})`);
-      console.log(`${'═'.repeat(80)}`);
+      console.log(`${''.repeat(80)}`);
       console.log(`Question/Topic: "${question}"`);
       console.log(`Context levels: ${nodeContext?._styles?.llmSuggestedItems || 'default'}`);
 
@@ -346,19 +434,37 @@ Formato: Una pregunta por línea`)
       switch(type) {
         case 'basic':
           console.log('\nBASIC PROMPT (no context)');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
-          console.log('✓ Simple prompt - just the question');
+          console.log(' Simple prompt - just the question');
           break;
         case 'pdf':
-          console.log('\nPDF PROMPT');
-          console.log('─'.repeat(80));
-          console.warn('PDF-based prompts require PDF upload functionality');
-          prompt = PromptBuilder.getPromptForPDFAnswers(nodeContext, question);
+          console.log('\nPDF PROMPT (RAG-Enhanced)');
+          console.log('.repeat(80));
+          
+          if (options.pdfChunks && options.pdfChunks.length > 0) {
+            console.log(`Using ${options.pdfChunks.length} PDF chunks as context`);
+            prompt = PromptBuilder.getPromptForPDFAnswers(nodeContext, question);
+            
+            // Add the actual PDF content to the prompt
+            prompt += '\n\nRELEVANT CONTEXT FROM PDF:\n';
+            prompt += '═'.repeat(80) + '\n';
+            options.pdfChunks.forEach((chunk, index) => {
+              prompt += `\n[CHUNK ${index + 1}] (Page ${chunk.pageNumber}, Similarity: ${chunk.similarity.toFixed(3)})\n`;
+              prompt += chunk.text + '\n';
+              prompt += '─'.repeat(80) + '\n';
+            });
+            prompt += '\n═'.repeat(80) + '\n';
+            prompt += 'Based STRICTLY on the above context, answer the question. Include excerpts from the chunks to support your answers.\n';
+            console.log(` Added ${options.pdfChunks.length} PDF chunks to prompt`);
+          } else {
+            console.warn('PDF type selected but no chunks provided, falling back to basic prompt');
+            prompt = PromptBuilder.getPromptForLLMAnswers(nodeContext, question);
+          }
           break;
         case 'aggregation':
           console.log('\nAGGREGATION PROMPT');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           console.log(`Clustering ${options.nodes?.length || 0} nodes into ${options.clusterCount || 3} groups`);
           prompt = PromptBuilder.getPromptForSummarizationAnswers(
             question,
@@ -368,7 +474,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'summarization-questions':
           console.log('\nSUMMARIZATION QUESTIONS PROMPT');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           prompt = PromptBuilder.getPromptForSummarizationQuestions(
             question,
             options.nodes || [],
@@ -377,7 +483,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-model':
           console.log('\nSUGGESTED MODEL PROMPT (with full context)');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
@@ -396,7 +502,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-logs':
           console.log('\nSUGGESTED LOGS PROMPT (with history)');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Previous Question (Parent): "${options.previousQuestion}"`);
@@ -415,7 +521,7 @@ Formato: Una pregunta por línea`)
           break;
         case 'suggested-llm':
           console.log('\nSUGGESTED LLM PROMPT (with full context - KEY FEATURE)');
-          console.log('─'.repeat(80));
+          console.log('.repeat(80));
           console.log('CONTEXT INFORMATION:');
           console.log(`  • Root Question (Level 1):    "${options.firstQuestion}"`);
           console.log(`  • Parent Question (Level ${options.fullPath?.length - 1 || '?'}): "${options.previousQuestion}"`);
@@ -436,9 +542,9 @@ Formato: Una pregunta por línea`)
       }
 
       console.log('\nFULL PROMPT BEING SENT TO LLM:');
-      console.log('─'.repeat(80));
+      console.log('.repeat(80));
       console.log(prompt);
-      console.log('─'.repeat(80));
+      console.log('.repeat(80));
       console.log('\nInvoking LLM...\n');
 
       const messages = [
@@ -469,7 +575,7 @@ Formato: Una pregunta por línea`)
 
       const parsedResponse = this._parseStructuredResponse(response.content);
       console.log('Parsed structured response:', parsedResponse.parseError ? `ERROR: ${parsedResponse.parseError}` : 'SUCCESS');
-      console.log(`${'═'.repeat(80)}\n`);
+      console.log(`${''.repeat(80)}\n`);
 
       if (!parsedResponse || typeof parsedResponse !== 'object') {
         console.error('Parsed response is invalid:', parsedResponse);
@@ -480,7 +586,7 @@ Formato: Una pregunta por línea`)
     } catch (error) {
       console.error('OpenAI structured generation error:', error.message);
       console.error('Error details:', error);
-      console.log(`${'═'.repeat(80)}\n`);
+      console.log(`${''.repeat(80)}\n`);
       throw error;
     }
   }
@@ -534,8 +640,8 @@ class OpenAIServiceProxy {
     return this.serviceInstance;
   }
 
-  generateNodes(nodeText, nodeTipo, count, useStructured, description) {
-    return this.getInstance().generateNodes(nodeText, nodeTipo, count, useStructured, description);
+  generateNodes(nodeText, nodeTipo, count, nodeContextData, documentId) {
+    return this.getInstance().generateNodes(nodeText, nodeTipo, count, nodeContextData, documentId);
   }
 
   generateStructuredNodes(nodeContext, question, type, options) {

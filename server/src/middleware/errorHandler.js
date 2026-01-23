@@ -1,5 +1,5 @@
 export const errorHandler = (err, req, res, next) => {
-  console.error('\n🚨 ERROR:', err.message);
+  console.error('\n ERROR:', err.message);
   console.error('Stack:', err.stack);
 
   // Default error

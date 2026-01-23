@@ -200,6 +200,7 @@
 .description-textarea {
   width: 100%;
   min-height: 200px;
+  max-height: 400px;
   padding: 12px;
   background: rgba(31, 41, 55, 0.5);
   border: 1px solid rgba(139, 92, 246, 0.3);
@@ -208,8 +209,27 @@
   font-family: inherit;
   font-size: 0.875rem;
   line-height: 1.6;
-  resize: vertical;
+  resize: none;
   transition: all 0.2s;
+  overflow-y: auto;
+}
+
+.description-textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.description-textarea::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+  border-radius: 4px;
+}
+
+.description-textarea::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+}
+
+.description-textarea::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
 }
 
 .description-textarea:focus {

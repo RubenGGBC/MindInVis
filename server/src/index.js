@@ -27,6 +27,8 @@ import connectDB from './config/database.js';
 import mindmapRoutes from './routes/mindmap.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import uploadRoutes from './routes/upload.routes.js';
+import documentRoutes from './routes/document.routes.js';
+import nodeLogRoutes from './routes/nodelog.routes.js';
 
 // Import middleware
 import { errorHandler } from './middleware/errorHandler.js';
@@ -60,6 +62,8 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/mindmap', mindmapRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/documents', documentRoutes);
+app.use('/api/logs', nodeLogRoutes);
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('uploads'));

@@ -18,9 +18,9 @@ export const MapDataProvider = ({ children }) => {
   const { data: recentMapsData = [], isLoading: isLoadingRecent } = useQuery({
     queryKey: ['recentMaps'],
     queryFn: async () => {
-      console.log('🔄 Fetching recent maps...');
+      console.log('Fetching recent maps...');
       const result = await mapService.getRecentMaps();
-      console.log('📊 Recent maps response:', result);
+      console.log('Recent maps response:', result);
       return result;
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
@@ -30,11 +30,11 @@ export const MapDataProvider = ({ children }) => {
   const createMapMutation = useMutation({
     mutationFn: mapService.createMap,
     onSuccess: async (data) => {
-      console.log('✅ Map created successfully:', data);
-      console.log('🔄 Invalidating and refetching queries...');
+      console.log('Map created successfully:', data);
+      console.log('Invalidating and refetching queries...');
       await queryClient.invalidateQueries({ queryKey: ['maps'], refetchType: 'active' });
       await queryClient.invalidateQueries({ queryKey: ['recentMaps'], refetchType: 'active' });
-      console.log('✅ Queries invalidated and refetched');
+      console.log('Queries invalidated and refetched');
     },
   });
 
@@ -121,11 +121,11 @@ export const MapDataProvider = ({ children }) => {
 
   // Format recent maps for display
   const recentMaps = useMemo(() => {
-    console.log('🔄 Transforming recent maps data...');
+    console.log('Transforming recent maps data...');
     console.log('Raw recentMapsData:', recentMapsData);
 
     if (!Array.isArray(recentMapsData)) {
-      console.warn('⚠️ recentMapsData is not an array:', recentMapsData);
+      console.warn('recentMapsData is not an array:', recentMapsData);
       return [];
     }
 
@@ -151,7 +151,7 @@ export const MapDataProvider = ({ children }) => {
       };
     });
 
-    console.log('✅ Transformed recent maps:', transformed);
+    console.log('Transformed recent maps:', transformed);
     return transformed;
   }, [recentMapsData]);
 

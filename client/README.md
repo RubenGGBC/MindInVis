@@ -1,6 +1,6 @@
-# MindInVis - Cliente
+# MindInVis - Client
 
-Frontend de MindInVis construido con React y Vite.
+MindInVis frontend built with React and Vite.
 
 ## Estructura
 
